@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Fulbito",
+    "slug": "fulbito",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "description": "Fulbito conecta jugadores y clubes de futbol en Cordoba para reservar canchas, dividir pagos y armar partidos.",
+    "userInterfaceStyle": "light",
+    "jsEngine": "jsc",
+    "scheme": "fulbito",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.apoc.fulbito",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Fulbito usa tu ubicacion para mostrar canchas cercanas en Cordoba.",
+        "NSPhotoLibraryUsageDescription": "Fulbito usa tus fotos para cargar imagenes de perfil, clubes y canchas.",
+        "NSUserNotificationUsageDescription": "Fulbito envia avisos sobre reservas, pagos y partidos."
+      }
+    },
+    "android": {
+      "package": "com.apoc.fulbito",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "company": {
+        "legalName": "Apoc Automation",
+        "supportEmail": "apoc@apocautomation.site",
+        "website": "https://apoc.apocautomation.site"
+      }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Fulbito usa tu ubicacion para mostrar canchas cercanas en Cordoba."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1F7A4D"
+        }
+      ]
+    ]
+  }
+}
