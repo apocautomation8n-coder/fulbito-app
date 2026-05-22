@@ -27,76 +27,76 @@ const fontFamilies = {
 
 const variantStyles: Record<string, any> = {
   display: {
-    fontSize: typography.fontSize['6xl'],
+    fontSize: typography.fontSize['4xl'], // 32
     fontWeight: '800' as const,
     fontFamily: fontFamilies.display,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h1: {
-    fontSize: typography.fontSize['5xl'],
+    fontSize: typography.fontSize['2xl'], // 24
     fontWeight: '800' as const,
     fontFamily: fontFamilies.display,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h2: {
-    fontSize: typography.fontSize['4xl'],
-    fontWeight: '800' as const,
+    fontSize: typography.fontSize.xl, // 20
+    fontWeight: '700' as const,
     fontFamily: fontFamilies.display,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h3: {
-    fontSize: typography.fontSize['3xl'],
+    fontSize: typography.fontSize.lg, // 18
     fontWeight: '700' as const,
     fontFamily: fontFamilies.display,
     lineHeight: typography.lineHeight.tight,
   },
   h4: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: '700' as const,
+    fontSize: typography.fontSize.md, // 16
+    fontWeight: '600' as const,
     fontFamily: fontFamilies.display,
     lineHeight: typography.lineHeight.tight,
   },
   h5: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.base, // 14
     fontWeight: '600' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.tight,
   },
   h6: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.sm, // 12
     fontWeight: '600' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.tight,
   },
   body: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography.fontSize.base, // 14
     fontWeight: '400' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.normal,
   },
   'body-lg': {
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.md, // 16
     fontWeight: '400' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.normal,
   },
   'body-sm': {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.sm, // 12
     fontWeight: '400' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.normal,
   },
   caption: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography.fontSize.xs, // 11
     fontWeight: '400' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.tight,
   },
   label: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.sm, // 12
     fontWeight: '500' as const,
     fontFamily: fontFamilies.primary,
     lineHeight: typography.lineHeight.tight,

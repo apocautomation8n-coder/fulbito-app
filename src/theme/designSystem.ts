@@ -1,48 +1,48 @@
 /**
- * Fulbito Premium Design System - Clean & Sporty Dark Mode First
+ * Fulbito Premium Design System - Modern Light Mode First
  * High readability, high performance, real mobile app aesthetics
  */
 
-// Colors - Dark Theme
+// Colors - Premium Light Theme
 export const colors = {
-  // Primary Green (Used as accent only, not to paint the whole app)
-  primary: '#65F36A',
-  primaryDark: '#4CD651',
-  primaryLight: '#82FF86',
+  // Primary Green (Used as accent and buttons - lively & sporty emerald)
+  primary: '#10B981',
+  primaryDark: '#059669',
+  primaryLight: '#D1FAE5',
   
-  // Dark Backgrounds
-  background: '#0B0F0C',
-  backgroundSecondary: '#121815', // Surface
-  card: '#171F1B',
-  cardLight: '#222D27',
+  // Backgrounds
+  background: '#F8FAFC',          // Light Slate
+  backgroundSecondary: '#FFFFFF', // Pure White Surface
+  card: '#FFFFFF',                // Card background
+  cardLight: '#F1F5F9',           // Subtle inner element background
   
   // Accent
-  accent: '#65F36A',
-  accentDim: '#4CD651',
+  accent: '#10B981',
+  accentDim: '#059669',
   
   // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A9B5AC',
-  textTertiary: '#738378',
-  textDisabled: '#46534B',
+  textPrimary: '#0F172A',         // Slate 900 (High contrast)
+  textSecondary: '#475569',       // Slate 600
+  textTertiary: '#64748B',        // Slate 500
+  textDisabled: '#94A3B8',        // Slate 400
   
   // Status
-  success: '#65F36A',
-  warning: '#FFC857',
-  danger: '#FF5252',
-  info: '#4EA8DE',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
   
-  // Border (Real mobile app hairline borders)
-  border: 'rgba(255, 255, 255, 0.06)',
-  glassBorder: 'rgba(255, 255, 255, 0.06)', // Fallback
+  // Border (Clean, high-visibility hairline borders)
+  border: '#E2E8F0',              // Slate 200
+  glassBorder: '#E2E8F0',
   
-  // Clean overlays (minimal glassmorphism, opaque and fast to render)
-  glass: 'rgba(18, 24, 21, 0.95)',
-  glassLight: 'rgba(23, 31, 27, 0.90)',
+  // Clean overlays
+  glass: 'rgba(255, 255, 255, 0.95)',
+  glassLight: 'rgba(248, 250, 252, 0.90)',
   
-  // Shadows (Soft, performance friendly)
-  shadow: 'rgba(0, 0, 0, 0.5)',
-  shadowLight: 'rgba(0, 0, 0, 0.25)',
+  // Shadows (Soft, modern, light elevation shadows)
+  shadow: '#0F172A',
+  shadowLight: '#64748B',
 };
 
 // Typography Scale (Inter Font Only)
@@ -86,7 +86,7 @@ export const typography = {
     relaxed: 1.7,
   },
   
-  // Letter Spacing
+  // Letter Spacing (Numbers only for React Native compatibility)
   letterSpacing: {
     tight: -0.3,
     normal: 0,
@@ -94,7 +94,7 @@ export const typography = {
   },
 };
 
-// Spacing Scale (Airy and consistent spacing)
+// Spacing Scale
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -106,7 +106,7 @@ export const spacing = {
   '4xl': 64,
 };
 
-// Border Radius (Clean, sports-app rounded corners)
+// Border Radius
 export const borderRadius = {
   sm: 6,
   md: 10,
@@ -122,32 +122,31 @@ export const shadows = {
   sm: {
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 1.0,
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
     elevation: 1,
   },
   md: {
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3.84,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   lg: {
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
   },
   xl: {
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
   },
-  // Remove neon glow - use clean soft shadow fallback
   glow: {
     shadowColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
@@ -157,7 +156,7 @@ export const shadows = {
   },
 };
 
-// Animation Durations (Fast transitions for snappier native feel)
+// Animation Durations
 export const animation = {
   fast: 100,
   normal: 200,
@@ -184,7 +183,7 @@ export const breakpoints = {
   xl: 1280,
 };
 
-// Glassmorphism Styles (Simplified to fast-rendering opaque surface containers)
+// Glassmorphism Styles (For Light Mode)
 export const glassmorphism = {
   card: {
     backgroundColor: colors.card,
@@ -198,12 +197,12 @@ export const glassmorphism = {
   },
 };
 
-// Gradient Presets (Removed neon gradients, keeping subtle shadows/darks)
+// Gradient Presets
 export const gradients = {
   primary: [colors.primary, colors.primaryDark],
   accent: [colors.accent, colors.accentDim],
   dark: [colors.backgroundSecondary, colors.background],
-  glow: [colors.backgroundSecondary, colors.backgroundSecondary], // Fallback to flat background
+  glow: [colors.backgroundSecondary, colors.backgroundSecondary],
 };
 
 // Transition Presets
@@ -231,4 +230,3 @@ export default {
   gradients,
   transitions,
 };
-

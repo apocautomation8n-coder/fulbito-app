@@ -85,10 +85,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   darkText: {
-    color: colors.background,
+    color: '#FFFFFF',
   },
   lightText: {
-    color: colors.textPrimary,
+    color: '#FFFFFF',
   },
 });
 

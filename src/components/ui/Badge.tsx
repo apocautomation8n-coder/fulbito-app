@@ -27,6 +27,23 @@ export function Badge({
   style,
   icon,
 }: BadgeProps) {
+  const getLabelColor = () => {
+    switch (variant) {
+      case 'primary':
+      case 'accent':
+      case 'success':
+      case 'danger':
+        return { color: colors.background };
+      case 'warning':
+        return { color: '#FFFFFF' };
+      case 'glow':
+        return { color: colors.primary };
+      case 'default':
+      default:
+        return { color: colors.textPrimary };
+    }
+  };
+
   const getLabelStyle = () => {
     return size === 'sm' ? styles.labelSm : size === 'md' ? styles.labelMd : styles.labelLg;
   };
@@ -34,7 +51,7 @@ export function Badge({
   return (
     <View style={[styles.base, styles[variant], styles[size], style]}>
       {icon && <View style={styles.icon}>{icon}</View>}
-      <Text style={[styles.label, getLabelStyle()]}>{label}</Text>
+      <Text style={[styles.label, getLabelColor(), getLabelStyle()]}>{label}</Text>
     </View>
   );
 }
@@ -78,7 +95,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   glow: {
-    backgroundColor: 'rgba(101, 243, 106, 0.1)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     borderWidth: 1,
     borderColor: colors.primary,
   },

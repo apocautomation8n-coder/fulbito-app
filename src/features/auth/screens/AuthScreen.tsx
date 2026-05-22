@@ -70,17 +70,25 @@ export function AuthScreen() {
       <View style={styles.formContainer}>
         <Card variant="glass" size="lg" style={styles.formCard}>
           <View style={styles.roleSelector}>
-            {roleOptions.map((option) => (
-              <Chip
-                key={option.value}
-                label={option.label}
-                icon={option.icon}
-                selected={role === option.value}
-                onSelect={() => setRole(option.value)}
-                variant={role === option.value ? 'primary' : 'outline'}
-                size="md"
-              />
-            ))}
+            {roleOptions.map((option) => {
+              const isSelected = role === option.value;
+              const iconColor = isSelected ? colors.background : colors.textSecondary;
+              const iconElement = option.icon 
+                ? React.cloneElement(option.icon as React.ReactElement, { color: iconColor }) 
+                : null;
+
+              return (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  icon={iconElement}
+                  selected={isSelected}
+                  onSelect={() => setRole(option.value)}
+                  variant={isSelected ? 'primary' : 'outline'}
+                  size="md"
+                />
+              );
+            })}
           </View>
 
           <View style={styles.inputs}>

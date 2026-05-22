@@ -71,7 +71,7 @@ export function ClubAgendaScreen() {
 
       <Button
         disabled={isLoading}
-        icon={<CalendarPlus color={colors.surface} size={18} />}
+        icon={<CalendarPlus color={colors.primary} size={18} />}
         label={isLoading ? 'Cargando...' : 'Actualizar'}
         onPress={loadBookings}
         variant="secondary"

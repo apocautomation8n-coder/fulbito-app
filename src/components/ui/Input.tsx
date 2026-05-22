@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   glass: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardLight,
   },
   outline: {
     backgroundColor: 'transparent',

@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   xpBar: {
     width: '100%',
     height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: spacing.xs,

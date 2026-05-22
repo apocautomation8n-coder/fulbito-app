@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   activeTab: {
-    backgroundColor: 'rgba(101, 243, 106, 0.05)', // Subtle primary brand tint on active tab, very premium
+    backgroundColor: 'rgba(16, 185, 129, 0.08)', // Subtle primary brand tint on active tab, very premium
   },
   pressed: {
     opacity: 0.7,

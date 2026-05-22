@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardLight,
     borderRadius: borderRadius.sm,
     padding: spacing.sm,
     gap: spacing.md,

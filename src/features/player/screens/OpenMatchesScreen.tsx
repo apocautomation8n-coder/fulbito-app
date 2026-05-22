@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardLight,
     borderRadius: borderRadius.sm,
     padding: spacing.sm,
     gap: spacing.md,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   progressBarBg: {
     height: 6,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardLight,
     borderRadius: borderRadius.full,
     overflow: 'hidden',
     marginBottom: spacing.xs,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(101, 243, 106, 0.08)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
