@@ -77,12 +77,34 @@ export function BookingScreen({
     return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
+  const isToday = (d: Date) => d.toDateString() === new Date().toDateString();
+
+  const getFilteredHours = () => {
+    if (!isToday(selectedDate)) return AVAILABLE_HOURS;
+    const now = new Date();
+    const currentHour = now.getHours();
+    return AVAILABLE_HOURS.filter((h) => {
+      const hourNum = parseInt(h.split(':')[0], 10);
+      return hourNum > currentHour;
+    });
+  };
+
+  const filteredHours = getFilteredHours();
+
   const onDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
     if (date) {
       setSelectedDate(date);
+      // Reset selected hour if it's now in the past for the new date
+      if (date.toDateString() === new Date().toDateString() && selectedHour) {
+        const currentHour = new Date().getHours();
+        const selectedH = parseInt(selectedHour.split(':')[0], 10);
+        if (selectedH <= currentHour) {
+          setSelectedHour('');
+        }
+      }
     }
   };
 
@@ -242,22 +264,28 @@ export function BookingScreen({
               Selecciona la hora de inicio. La duración del turno es de {durationMinutes} minutos.
             </Text>
 
-            <View style={styles.hoursGrid}>
-              {AVAILABLE_HOURS.map((hour) => {
-                const isSelected = selectedHour === hour;
-                return (
-                  <Pressable
-                    key={hour}
-                    style={[styles.hourChip, isSelected && styles.hourChipSelected]}
-                    onPress={() => setSelectedHour(hour)}
-                  >
-                    <Text style={[styles.hourChipText, isSelected && styles.hourChipTextSelected]}>
-                      {hour}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {filteredHours.length === 0 ? (
+              <View style={styles.noHoursBox}>
+                <Text style={styles.noHoursText}>No quedan horarios disponibles para hoy. Probá seleccionar otro día.</Text>
+              </View>
+            ) : (
+              <View style={styles.hoursGrid}>
+                {filteredHours.map((hour) => {
+                  const isSelected = selectedHour === hour;
+                  return (
+                    <Pressable
+                      key={hour}
+                      style={[styles.hourChip, isSelected && styles.hourChipSelected]}
+                      onPress={() => setSelectedHour(hour)}
+                    >
+                      <Text style={[styles.hourChipText, isSelected && styles.hourChipTextSelected]}>
+                        {hour}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
             {selectedHour !== '' && (
               <View style={styles.selectedTimeDisplay}>
@@ -551,5 +579,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textTertiary,
     lineHeight: 18,
+  },
+  noHoursBox: {
+    backgroundColor: '#FEF2F2',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  noHoursText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
