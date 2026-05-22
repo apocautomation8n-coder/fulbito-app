@@ -29,6 +29,9 @@ export type Booking = {
   created_at: string;
   paid_at: string | null;
   cancelled_at: string | null;
+  clubName?: string;
+  courtName?: string;
+  startsAtLabel?: string;
 };
 
 export type CreateBookingInput = {
@@ -203,7 +206,94 @@ export class BookingsRepository {
   }
 
   async getPlayerBookings(playerId: string): Promise<Booking[]> {
-    if (!supabase) return [];
+    if (!supabase) {
+      return [
+        {
+          id: 'b-101',
+          player_id: playerId,
+          slot_id: 'slot-1',
+          club_id: 'club-1',
+          court_id: 'court-1',
+          total_amount: 28000,
+          amount_due_now: 0,
+          app_commission: 1400,
+          club_amount: 26600,
+          payment_mode: 'full',
+          mp_payment_id: 'mp-99081',
+          status: 'paid',
+          is_manual: false,
+          created_at: new Date().toISOString(),
+          paid_at: new Date().toISOString(),
+          cancelled_at: null,
+          clubName: 'La Docta Fútbol',
+          courtName: 'Cancha 1 (Sintético)',
+          startsAtLabel: 'Hoy 21:00 hs',
+        },
+        {
+          id: 'b-102',
+          player_id: playerId,
+          slot_id: 'slot-2',
+          club_id: 'club-2',
+          court_id: 'court-2',
+          total_amount: 22000,
+          amount_due_now: 22000,
+          app_commission: 1100,
+          club_amount: 20900,
+          payment_mode: 'full',
+          mp_payment_id: null,
+          status: 'pending_payment',
+          is_manual: false,
+          created_at: new Date().toISOString(),
+          paid_at: null,
+          cancelled_at: null,
+          clubName: 'Barrio Norte Club',
+          courtName: 'Sintético A',
+          startsAtLabel: 'Mañana 19:00 hs',
+        },
+        {
+          id: 'b-103',
+          player_id: playerId,
+          slot_id: 'slot-3',
+          club_id: 'club-3',
+          court_id: 'court-3',
+          total_amount: 64000,
+          amount_due_now: 0,
+          app_commission: 3200,
+          club_amount: 60800,
+          payment_mode: 'full',
+          mp_payment_id: 'mp-88992',
+          status: 'paid',
+          is_manual: false,
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          paid_at: new Date(Date.now() - 86400000).toISOString(),
+          cancelled_at: null,
+          clubName: 'Predio Kempes',
+          courtName: 'Cancha Grande (Césped)',
+          startsAtLabel: 'Sábado 18:00 hs',
+        },
+        {
+          id: 'b-104',
+          player_id: playerId,
+          slot_id: 'slot-4',
+          club_id: 'club-4',
+          court_id: 'court-4',
+          total_amount: 20000,
+          amount_due_now: 0,
+          app_commission: 1000,
+          club_amount: 19000,
+          payment_mode: 'full',
+          mp_payment_id: null,
+          status: 'cancelled',
+          is_manual: false,
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          paid_at: null,
+          cancelled_at: new Date(Date.now() - 172800000).toISOString(),
+          clubName: 'Complejo El Bosque',
+          courtName: 'Cancha 3',
+          startsAtLabel: 'Ayer 20:00 hs',
+        },
+      ];
+    }
 
     const { data, error } = await supabase
       .from('bookings')
