@@ -241,7 +241,7 @@ export function BookingScreen({
             <Pressable onPress={onCancel} style={styles.backButton}>
               <ArrowLeft size={22} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.headerTitle}>Reservar Turno</Text>
+            <Text style={styles.headerTitle}>Reservar Cancha ⚡</Text>
             <View style={{ width: 40 }} />
           </View>
 
