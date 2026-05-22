@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, ScrollView, View, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, ChevronRight, Flag, LogOut, Star, Trophy, Trash2, User, Zap, Mail, Phone, Info, ShieldCheck, Heart, Award, MapPin } from 'lucide-react-native';
+import { Calendar, ChevronRight, Flag, LogOut, Star, Trophy, Trash2, User, Zap, Mail, Phone, Info, Shield, Heart, MapPin } from 'lucide-react-native';
 
 import { useAuth } from '../../../core/providers/AuthProvider';
 import { Button } from '../../../components/ui/Button';
@@ -90,7 +90,7 @@ export function PlayerProfileScreen() {
               <Text style={styles.jerseyNumber}>#{playerStats.jerseyNumber}</Text>
             </View>
             <View style={styles.goldLevelBadge}>
-              <ShieldCheck size={14} color="#D97706" />
+              <Shield size={14} color="#D97706" />
               <Text style={styles.goldLevelText}>{playerStats.levelName}</Text>
             </View>
           </View>
@@ -109,7 +109,7 @@ export function PlayerProfileScreen() {
             <View style={styles.playerMeta}>
               <Text style={styles.playerName}>{playerStats.fullName}</Text>
               <View style={styles.positionContainer}>
-                <Award size={14} color={colors.primary} />
+                <Trophy size={14} color={colors.primary} />
                 <Text style={styles.playerPosition}>{playerStats.position}</Text>
               </View>
               <View style={styles.locationBadge}>
@@ -153,7 +153,7 @@ export function PlayerProfileScreen() {
           </Card>
 
           <Card variant="glass" size="md" style={styles.statBox}>
-            <Award size={24} color="#8B5CF6" />
+            <Trophy size={24} color="#8B5CF6" />
             <Text style={styles.statVal}>{playerStats.mvps}</Text>
             <Text style={styles.statLabel}>Premios MVP</Text>
           </Card>
