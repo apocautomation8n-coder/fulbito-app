@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ArrowLeft, Clock, DollarSign, Users } from 'lucide-react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ArrowLeft, Clock, DollarSign, Users, Trophy } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/Input';
+import { Toggle } from '../../../components/ui/Toggle';
+import { Badge } from '../../../components/ui/Badge';
+import { H2, H3, H4, Body, Caption } from '../../../components/ui/Typography';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { matchesRepository } from '../../../data/repositories/matches.repository';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing } from '../../../theme/designSystem';
+
 
 interface CreateMatchScreenProps {
   bookingId: string;
@@ -23,6 +28,7 @@ export function CreateMatchScreen({ bookingId, courtName, totalAmount, onComplet
   const [description, setDescription] = useState('');
   const [isSplitPayment, setIsSplitPayment] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   const calculatePricePerPlayer = () => {
     const spots = parseInt(spotsTotal, 10);
@@ -53,7 +59,6 @@ export function CreateMatchScreen({ bookingId, courtName, totalAmount, onComplet
     try {
       const deadline = calculatePaymentDeadline();
 
-      // First, get the booking to get court_id and club_id
       const booking = await bookingsRepository.getBooking(bookingId);
       if (!booking) {
         throw new Error('Reserva no encontrada');
@@ -61,7 +66,7 @@ export function CreateMatchScreen({ bookingId, courtName, totalAmount, onComplet
 
       await matchesRepository.createMatch({
         booking_id: bookingId,
-        organizer_id: 'demo-player', // TODO: Get from auth
+        organizer_id: 'demo-player',
         spots_total: spots,
         is_split_payment: isSplitPayment,
         price_per_player: price,
@@ -91,107 +96,102 @@ export function CreateMatchScreen({ bookingId, courtName, totalAmount, onComplet
       behavior={Platform.select({ ios: 'padding', android: undefined })}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Button icon={<ArrowLeft color={colors.ink} size={20} />} label="" onPress={onCancel} variant="ghost" />
-          <Text style={styles.title}>Abrir partido</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
+        <View>
+          <View style={styles.header}>
+            <Button icon={<ArrowLeft size={20} />} label="" onPress={onCancel} variant="ghost" size="sm" />
+            <H2>Abrir partido</H2>
+            <View style={{ width: 40 }} />
+          </View>
 
-        <Card style={styles.infoCard}>
-          <Text style={styles.courtName}>{courtName}</Text>
-          <Text style={styles.infoText}>
-            Total de la reserva: {formatCurrency(totalAmount)}
-          </Text>
-        </Card>
+          <Card variant="glass" size="lg" style={styles.infoCard}>
+            <H3>{courtName}</H3>
+            <Badge label={`Total: ${formatCurrency(totalAmount)}`} variant="accent" />
+          </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Configuración del partido</Text>
+          <Card variant="elevated" size="lg" style={styles.formCard}>
+            <H4 style={styles.sectionTitle}>Configuración del partido</H4>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Cantidad de jugadores</Text>
-            <View style={styles.inputWrapper}>
-              <Users color={colors.muted} size={20} style={styles.inputIcon} />
-              <TextInput
+            <View style={styles.inputGroup}>
+              <Input
                 keyboardType="number-pad"
                 onChangeText={setSpotsTotal}
-                placeholder="Ej: 10"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
+                placeholder="Cantidad de jugadores"
                 value={spotsTotal}
+                variant="glass"
+                leftIcon={<Users size={20} color={colors.textSecondary} />}
               />
+              <Caption style={styles.hint}>Incluye al organizador</Caption>
             </View>
-            <Text style={styles.hint}>Incluye al organizador</Text>
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Precio por jugador (ARS)</Text>
-            <View style={styles.inputWrapper}>
-              <DollarSign color={colors.muted} size={20} style={styles.inputIcon} />
-              <TextInput
+            <View style={styles.inputGroup}>
+              <Input
                 keyboardType="decimal-pad"
                 onChangeText={setPricePerPlayer}
-                placeholder={`Sugerido: ${formatCurrency(suggestedPrice)}`}
-                placeholderTextColor={colors.muted}
-                style={styles.input}
+                placeholder={`Precio sugerido: ${formatCurrency(suggestedPrice)}`}
                 value={pricePerPlayer}
+                variant="glass"
+                leftIcon={<DollarSign size={20} color={colors.textSecondary} />}
+              />
+              {!pricePerPlayer && (
+                <Caption style={styles.hint}>Sugerido: {formatCurrency(suggestedPrice)} por jugador</Caption>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Input
+                multiline
+                numberOfLines={3}
+                onChangeText={setDescription}
+                placeholder="Descripción (opcional)"
+                value={description}
+                variant="glass"
+                style={styles.textArea}
               />
             </View>
-            {!pricePerPlayer && (
-              <Text style={styles.hint}>Sugerido: {formatCurrency(suggestedPrice)} por jugador</Text>
-            )}
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Descripción (opcional)</Text>
-            <TextInput
-              multiline
-              numberOfLines={3}
-              onChangeText={setDescription}
-              placeholder="Ej: Partido amistoso, nivel intermedio..."
-              placeholderTextColor={colors.muted}
-              style={[styles.input, styles.textArea]}
-              value={description}
-            />
-          </View>
-
-          <View style={styles.toggleGroup}>
-            <Text style={styles.label}>Dividir pagos entre jugadores</Text>
-            <Text style={styles.toggleHint}>
-              Si activas esta opción, cada jugador pagará su parte. Si no, el organizador paga
-              el total.
-            </Text>
-            <Button
-              label={isSplitPayment ? 'Sí, dividir pagos' : 'No, pago completo'}
-              onPress={() => setIsSplitPayment(!isSplitPayment)}
-              variant={isSplitPayment ? 'primary' : 'secondary'}
-            />
-          </View>
-        </Card>
-
-        {isSplitPayment && (
-          <Card style={styles.infoCard}>
-            <View style={styles.metaRow}>
-              <Clock color={colors.primary} size={20} />
-              <View>
-                <Text style={styles.metaLabel}>Deadline de pago</Text>
-                <Text style={styles.metaValue}>
-                  {deadline.toLocaleDateString('es-AR')} {deadline.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
+            <View style={styles.toggleGroup}>
+              <Body style={styles.label}>Dividir pagos entre jugadores</Body>
+              <Caption style={styles.toggleHint}>
+                Si activas esta opción, cada jugador pagará su parte. Si no, el organizador paga el total.
+              </Caption>
+              <Toggle value={isSplitPayment} onValueChange={setIsSplitPayment} />
             </View>
-            <Text style={styles.infoText}>
-              Los jugadores tienen hasta {businessRules.defaultSplitDeadlineHoursBeforeKickoff} horas antes del partido para pagar su parte.
-            </Text>
           </Card>
-        )}
 
+          {isSplitPayment && (
+            <Card variant="glass" size="md" style={styles.infoCard}>
+              <View style={styles.metaRow}>
+                <Clock size={20} color={colors.primary} />
+                <View>
+                  <Body style={styles.metaLabel}>Deadline de pago</Body>
+                  <H3 style={styles.metaValue}>
+                    {deadline.toLocaleDateString('es-AR')} {deadline.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                  </H3>
+                </View>
+              </View>
+              <Caption style={styles.infoText}>
+                Los jugadores tienen hasta {businessRules.defaultSplitDeadlineHoursBeforeKickoff} horas antes del partido para pagar su parte.
+              </Caption>
+            </Card>
+          )}
+
+          <View style={styles.spacer} />
+        </View>
+      </ScrollView>
+
+      <View style={styles.floatingCTA}>
         <Button
           disabled={isSubmitting}
+          icon={<Trophy size={18} />}
           label={isSubmitting ? 'Creando partido...' : 'Abrir partido'}
           onPress={handleCreateMatch}
+          variant="glow"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
         />
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -201,100 +201,83 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     padding: spacing.lg,
-    gap: spacing.lg,
+    paddingBottom: 100,
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  title: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '800',
+    marginBottom: spacing.lg,
   },
   infoCard: {
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
     gap: spacing.sm,
-  },
-  courtName: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '700',
   },
   infoText: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textSecondary,
     lineHeight: 20,
+    textAlign: 'center',
   },
   formCard: {
-    gap: spacing.md,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '700',
+    marginBottom: spacing.lg,
   },
   label: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
   inputGroup: {
-    gap: spacing.sm,
-  },
-  inputWrapper: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: spacing.md,
-    zIndex: 1,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: typography.body,
-    minHeight: 48,
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.md,
-    width: '100%',
+    marginBottom: spacing.lg,
   },
   textArea: {
     minHeight: 80,
-    paddingTop: spacing.md,
     textAlignVertical: 'top',
   },
   hint: {
-    color: colors.muted,
-    fontSize: typography.tiny,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
   },
   toggleGroup: {
-    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   toggleHint: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textSecondary,
     lineHeight: 18,
+    marginBottom: spacing.md,
   },
   metaRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.md,
+    marginBottom: spacing.md,
   },
   metaLabel: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '600',
+    color: colors.textPrimary,
   },
   metaValue: {
-    color: colors.primaryDark,
-    fontSize: typography.body,
-    fontWeight: '700',
+    color: colors.primary,
+  },
+  spacer: {
+    height: spacing.xl,
+  },
+  floatingCTA: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 });

@@ -1,19 +1,46 @@
-import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Building2, ChevronRight, CreditCard, Edit2, Home, LogOut, MapPin, Send, Settings, Shield, Trash2 } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { Alert, Pressable, StyleSheet, ScrollView, View } from 'react-native';
+import { Building2, ChevronRight, CreditCard, Edit2, Home, LogOut, MapPin, Send, Settings, Shield, Trash2, TrendingUp, Users, DollarSign } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withDelay,
+} from 'react-native-reanimated';
 
 import { useAuth } from '../../../core/providers/AuthProvider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Screen } from '../../../components/ui/Screen';
+import { Badge } from '../../../components/ui/Badge';
+import { H1, H3, H4, Body, Caption } from '../../../components/ui/Typography';
 import { clubsService } from '../../../data/services/clubs.service';
 import { businessRules } from '../../../config/businessRules';
 import { company } from '../../../config/company';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing } from '../../../theme/designSystem';
+
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 export function ClubProfileScreen() {
   const { signOut, user } = useAuth();
   const [verificationStatus, setVerificationStatus] = useState<'draft' | 'pending' | 'approved' | 'rejected'>('draft');
+
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(20);
+
+  useEffect(() => {
+    opacity.value = withSequence(
+      withDelay(0, withSpring(1, { damping: 15, stiffness: 400 })),
+    );
+    translateY.value = withSequence(
+      withDelay(0, withSpring(0, { damping: 15, stiffness: 400 })),
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const handleSubmitForApproval = async () => {
     Alert.alert(
@@ -25,7 +52,6 @@ export function ClubProfileScreen() {
           text: 'Solicitar',
           onPress: async () => {
             try {
-              // TODO: Get actual club ID from auth context
               await clubsService.submitClubForApproval('demo-club');
               setVerificationStatus('pending');
               Alert.alert('Solicitud enviada', 'Tu solicitud de aprobación ha sido enviada.');
@@ -66,16 +92,16 @@ export function ClubProfileScreen() {
     );
   };
 
-  const getStatusColor = () => {
+  const getStatusVariant = () => {
     switch (verificationStatus) {
       case 'approved':
-        return colors.success;
+        return 'success';
       case 'pending':
-        return colors.coral;
+        return 'warning';
       case 'rejected':
-        return colors.danger;
+        return 'danger';
       default:
-        return colors.muted;
+        return 'default';
     }
   };
 
@@ -84,7 +110,7 @@ export function ClubProfileScreen() {
       case 'approved':
         return 'Verificado';
       case 'pending':
-        return 'Pendiente de aprobación';
+        return 'Pendiente';
       case 'rejected':
         return 'Rechazado';
       default:
@@ -93,193 +119,217 @@ export function ClubProfileScreen() {
   };
 
   return (
-    <Screen title="Club" subtitle={user?.email}>
-      <Card style={styles.profile}>
-        <View style={styles.iconWrap}>
-          <Building2 color={colors.primary} size={28} />
-        </View>
-        <View style={styles.textBlock}>
-          <Text style={styles.title}>{user?.fullName}</Text>
-          <Text style={[styles.subtitle, { color: getStatusColor() }]}>Estado: {getStatusText()}</Text>
-        </View>
-      </Card>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <AnimatedView style={animatedStyle}>
+        <Card variant="gradient" size="lg" style={styles.profileCard}>
+          <View style={styles.iconWrap}>
+            <Building2 color={colors.background} size={32} />
+          </View>
+          <View style={styles.textBlock}>
+            <H1 style={styles.title}>{user?.fullName}</H1>
+            <Badge label={getStatusText()} variant={getStatusVariant()} />
+          </View>
+        </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Información del club</Text>
-        <Pressable style={styles.item}>
-          <View style={styles.itemLeft}>
-            <Edit2 color={colors.ink} size={18} />
-            <Text style={styles.itemText}>Editar perfil</Text>
-          </View>
-          <ChevronRight color={colors.muted} size={16} />
-        </Pressable>
-        <View style={styles.item}>
-          <View style={styles.itemLeft}>
-            <MapPin color={colors.ink} size={18} />
-            <Text style={styles.itemText}>Dirección</Text>
-          </View>
-          <Text style={styles.itemValue}>Pendiente</Text>
+        <View style={styles.statsRow}>
+          <Card variant="glass" size="md" style={styles.statCard}>
+            <Users size={24} color={colors.primary} />
+            <H3 style={styles.statValue}>0</H3>
+            <Caption>Jugadores</Caption>
+          </Card>
+          <Card variant="glass" size="md" style={styles.statCard}>
+            <DollarSign size={24} color={colors.accent} />
+            <H3 style={styles.statValue}>0</H3>
+            <Caption>Reservas</Caption>
+          </Card>
+          <Card variant="glass" size="md" style={styles.statCard}>
+            <TrendingUp size={24} color={colors.warning} />
+            <H3 style={styles.statValue}>0%</H3>
+            <Caption>Ocupación</Caption>
+          </Card>
         </View>
-      </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Configuración</Text>
-        <View style={styles.item}>
-          <View style={styles.itemLeft}>
-            <Settings color={colors.ink} size={18} />
-            <Text style={styles.itemText}>Deadline split</Text>
-          </View>
-          <Text style={styles.itemValue}>{businessRules.defaultSplitDeadlineHoursBeforeKickoff}h</Text>
-        </View>
-        <Pressable style={styles.item} onPress={handleConnectMercadoPago}>
-          <View style={styles.itemLeft}>
-            <CreditCard color={colors.ink} size={18} />
-            <Text style={styles.itemText}>MercadoPago</Text>
-          </View>
-          <Text style={[styles.itemValue, styles.pendingValue]}>No conectado</Text>
-        </Pressable>
-      </Card>
-
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Verificación</Text>
-        {verificationStatus === 'draft' && (
-          <Button
-            icon={<Send color={colors.surface} size={18} />}
-            label="Solicitar aprobación"
-            onPress={handleSubmitForApproval}
-          />
-        )}
-        {verificationStatus === 'pending' && (
+        <Card variant="elevated" size="lg" style={styles.listCard}>
+          <H4 style={styles.sectionTitle}>Información del club</H4>
+          <Pressable style={styles.item}>
+            <View style={styles.itemLeft}>
+              <Edit2 size={20} color={colors.textPrimary} />
+              <Body>Editar perfil</Body>
+            </View>
+            <ChevronRight size={20} color={colors.textTertiary} />
+          </Pressable>
           <View style={styles.item}>
             <View style={styles.itemLeft}>
-              <Shield color={colors.coral} size={18} />
-              <Text style={styles.itemText}>Solicitud en revisión</Text>
+              <MapPin size={20} color={colors.textPrimary} />
+              <Body>Dirección</Body>
             </View>
+            <Badge label="Pendiente" variant="default" size="sm" />
           </View>
-        )}
-        {verificationStatus === 'approved' && (
+        </Card>
+
+        <Card variant="elevated" size="lg" style={styles.listCard}>
+          <H4 style={styles.sectionTitle}>Configuración</H4>
           <View style={styles.item}>
             <View style={styles.itemLeft}>
-              <Shield color={colors.success} size={18} />
-              <Text style={styles.itemText}>Club verificado</Text>
+              <Settings size={20} color={colors.textPrimary} />
+              <Body>Deadline split</Body>
             </View>
+            <Badge label={`${businessRules.defaultSplitDeadlineHoursBeforeKickoff}h`} variant="accent" size="sm" />
           </View>
-        )}
-        {verificationStatus === 'rejected' && (
-          <View style={styles.item}>
+          <Pressable style={styles.item} onPress={handleConnectMercadoPago}>
             <View style={styles.itemLeft}>
-              <Shield color={colors.danger} size={18} />
-              <Text style={styles.itemText}>Solicitud rechazada</Text>
+              <CreditCard size={20} color={colors.textPrimary} />
+              <Body>MercadoPago</Body>
             </View>
-          </View>
-        )}
-      </Card>
+            <Badge label="No conectado" variant="warning" size="sm" />
+          </Pressable>
+        </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Cuenta</Text>
-        <Pressable style={styles.item} onPress={handleDeleteAccount}>
-          <View style={styles.itemLeft}>
-            <Trash2 color={colors.danger} size={18} />
-            <Text style={[styles.itemText, styles.dangerText]}>Eliminar cuenta</Text>
-          </View>
-          <ChevronRight color={colors.muted} size={16} />
-        </Pressable>
-      </Card>
+        <Card variant="elevated" size="lg" style={styles.listCard}>
+          <H4 style={styles.sectionTitle}>Verificación</H4>
+          {verificationStatus === 'draft' && (
+            <Button
+              icon={<Send size={18} />}
+              label="Solicitar aprobación"
+              onPress={handleSubmitForApproval}
+              variant="primary"
+              size="md"
+              fullWidth
+            />
+          )}
+          {verificationStatus === 'pending' && (
+            <View style={styles.item}>
+              <View style={styles.itemLeft}>
+                <Shield size={20} color={colors.warning} />
+                <Body>Solicitud en revisión</Body>
+              </View>
+            </View>
+          )}
+          {verificationStatus === 'approved' && (
+            <View style={styles.item}>
+              <View style={styles.itemLeft}>
+                <Shield size={20} color={colors.accent} />
+                <Body>Club verificado</Body>
+              </View>
+            </View>
+          )}
+          {verificationStatus === 'rejected' && (
+            <View style={styles.item}>
+              <View style={styles.itemLeft}>
+                <Shield size={20} color={colors.danger} />
+                <Body>Solicitud rechazada</Body>
+              </View>
+            </View>
+          )}
+        </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.supportTitle}>Soporte</Text>
-        <Text style={styles.supportText}>{company.supportEmail}</Text>
-        <Text style={styles.supportText}>{company.website}</Text>
-        <Text style={styles.supportText}>{company.copyright}</Text>
-      </Card>
+        <Card variant="elevated" size="lg" style={styles.listCard}>
+          <H4 style={styles.sectionTitle}>Cuenta</H4>
+          <Pressable style={styles.item} onPress={handleDeleteAccount}>
+            <View style={styles.itemLeft}>
+              <Trash2 size={20} color={colors.danger} />
+              <Body style={styles.dangerText}>Eliminar cuenta</Body>
+            </View>
+            <ChevronRight size={20} color={colors.textTertiary} />
+          </Pressable>
+        </Card>
 
-      <Button
-        icon={<LogOut color={colors.ink} size={18} />}
-        label="Salir"
-        onPress={signOut}
-        variant="secondary"
-      />
-    </Screen>
+        <Card variant="glass" size="md" style={styles.supportCard}>
+          <Caption style={styles.supportTitle}>Soporte</Caption>
+          <Caption style={styles.supportText}>{company.supportEmail}</Caption>
+          <Caption style={styles.supportText}>{company.website}</Caption>
+          <Caption style={styles.supportText}>{company.copyright}</Caption>
+        </Card>
+
+        <Button
+          icon={<LogOut size={18} />}
+          label="Salir"
+          onPress={signOut}
+          variant="secondary"
+          size="lg"
+          fullWidth
+        />
+      </AnimatedView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  profile: {
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  profileCard: {
+    padding: spacing.xl,
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
   },
   iconWrap: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    height: 56,
+    backgroundColor: colors.primary,
+    borderRadius: 32,
+    height: 64,
     justifyContent: 'center',
-    width: 56,
+    width: 64,
+    marginBottom: spacing.md,
   },
   textBlock: {
-    flex: 1,
+    alignItems: 'center',
   },
   title: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
-  subtitle: {
-    color: colors.muted,
-    fontSize: typography.small,
-    marginTop: spacing.xs,
-  },
-  list: {
+  statsRow: {
+    flexDirection: 'row',
     gap: spacing.md,
   },
+  statCard: {
+    flex: 1,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  statValue: {
+    color: colors.textPrimary,
+  },
+  listCard: {
+    padding: spacing.lg,
+  },
   sectionTitle: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   item: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
   },
   itemLeft: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     flex: 1,
-  },
-  itemText: {
-    color: colors.ink,
-    fontSize: typography.body,
-  },
-  itemValue: {
-    color: colors.muted,
-    fontSize: typography.small,
-    fontWeight: '600',
-  },
-  pendingValue: {
-    color: colors.coral,
   },
   dangerText: {
     color: colors.danger,
   },
-  card: {
-    gap: spacing.md,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  supportCard: {
+    padding: spacing.lg,
+    alignItems: 'center',
   },
   supportTitle: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '800',
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
   supportText: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textTertiary,
+    marginBottom: spacing.xs,
   },
 });

@@ -1,14 +1,25 @@
-import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { ArrowLeft, Calendar, User } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withDelay,
+} from 'react-native-reanimated';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/Input';
+import { H2, Body, Caption } from '../../../components/ui/Typography';
 import { ClubRegistrationScreen } from '../../club/screens/ClubRegistrationScreen';
 import { businessRules } from '../../../config/businessRules';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing } from '../../../theme/designSystem';
 import type { UserRole } from '../../../types/domain';
 import { useAuth } from '../../../core/providers/AuthProvider';
+
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 interface SignUpScreenProps {
   onBack: () => void;
@@ -25,6 +36,23 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showClubRegistration, setShowClubRegistration] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
+
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(20);
+
+  useEffect(() => {
+    opacity.value = withSequence(
+      withDelay(0, withSpring(1, { damping: 15, stiffness: 400 })),
+    );
+    translateY.value = withSequence(
+      withDelay(0, withSpring(0, { damping: 15, stiffness: 400 })),
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const handleSignUp = async () => {
     if (!fullName.trim()) {
@@ -62,7 +90,6 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
       const result = await signUp(email, password, fullName, defaultRole, birthdate || undefined);
       
       if (defaultRole === 'club') {
-        // For club users, show club registration screen
         setNewUserId(result.userId);
         setShowClubRegistration(true);
       } else {
@@ -101,94 +128,86 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
       behavior={Platform.select({ ios: 'padding', android: undefined })}
       style={styles.container}
     >
-      <View style={styles.header}>
-        <Button icon={<ArrowLeft color={colors.ink} size={20} />} label="" onPress={onBack} variant="ghost" />
-        <Text style={styles.title}>Crear cuenta</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AnimatedView style={[styles.content, animatedStyle]}>
+        <View style={styles.header}>
+          <Button icon={<ArrowLeft size={20} />} label="" onPress={onBack} variant="ghost" size="sm" />
+          <H2>Crear cuenta</H2>
+          <View style={{ width: 40 }} />
+        </View>
 
-      <Card style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Nombre completo</Text>
-          <View style={styles.inputWrapper}>
-            <User color={colors.muted} size={20} style={styles.inputIcon} />
-            <TextInput
+        <Card variant="glass" size="lg" style={styles.formCard}>
+          <View style={styles.inputGroup}>
+            <Input
               autoCapitalize="words"
               onChangeText={setFullName}
-              placeholder="Juan Pérez"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
+              placeholder="Nombre completo"
               value={fullName}
+              variant="glass"
+              leftIcon={<User size={20} color={colors.textSecondary} />}
             />
           </View>
-        </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="juan@ejemplo.com"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={email}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Contraseña</Text>
-          <TextInput
-            onChangeText={setPassword}
-            placeholder="Mínimo 6 caracteres"
-            placeholderTextColor={colors.muted}
-            secureTextEntry
-            style={styles.input}
-            value={password}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirmar contraseña</Text>
-          <TextInput
-            onChangeText={setConfirmPassword}
-            placeholder="Repite tu contraseña"
-            placeholderTextColor={colors.muted}
-            secureTextEntry
-            style={styles.input}
-            value={confirmPassword}
-          />
-        </View>
-
-        {defaultRole === 'player' && (
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Fecha de nacimiento</Text>
-            <View style={styles.inputWrapper}>
-              <Calendar color={colors.muted} size={20} style={styles.inputIcon} />
-              <TextInput
+            <Input
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              onChangeText={setEmail}
+              placeholder="Email"
+              value={email}
+              variant="glass"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Input
+              onChangeText={setPassword}
+              placeholder="Contraseña (mínimo 6 caracteres)"
+              secureTextEntry
+              value={password}
+              variant="glass"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Input
+              onChangeText={setConfirmPassword}
+              placeholder="Confirmar contraseña"
+              secureTextEntry
+              value={confirmPassword}
+              variant="glass"
+            />
+          </View>
+
+          {defaultRole === 'player' && (
+            <View style={styles.inputGroup}>
+              <Input
                 keyboardType="numbers-and-punctuation"
                 onChangeText={setBirthdate}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
+                placeholder="Fecha de nacimiento (DD/MM/YYYY)"
                 value={birthdate}
+                variant="glass"
+                leftIcon={<Calendar size={20} color={colors.textSecondary} />}
               />
+              <Caption style={styles.hint}>Debes ser mayor de {businessRules.minimumAge} años</Caption>
             </View>
-            <Text style={styles.hint}>Debes ser mayor de {businessRules.minimumAge} años</Text>
-          </View>
-        )}
+          )}
 
-        <Button
-          disabled={isSubmitting}
-          label={isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
-          onPress={handleSignUp}
-        />
+          <Button
+            disabled={isSubmitting}
+            label={isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
+            onPress={handleSignUp}
+            variant="glow"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
+          />
 
-        <Text style={styles.terms}>
-          Al registrarte aceptas los términos y condiciones de {businessRules.appName}.
-        </Text>
-      </Card>
+          <Caption style={styles.terms}>
+            Al registrarte aceptas los términos y condiciones de {businessRules.appName}.
+          </Caption>
+        </Card>
+      </AnimatedView>
     </KeyboardAvoidingView>
   );
 }
@@ -196,6 +215,9 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
+    flex: 1,
+  },
+  content: {
     flex: 1,
     padding: spacing.lg,
   },
@@ -205,50 +227,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.xl,
   },
-  title: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '800',
-  },
-  form: {
-    gap: spacing.lg,
+  formCard: {
+    padding: spacing.xl,
   },
   inputGroup: {
-    gap: spacing.sm,
-  },
-  label: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: spacing.md,
-    zIndex: 1,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: typography.body,
-    minHeight: 48,
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.md,
-    width: '100%',
+    marginBottom: spacing.lg,
   },
   hint: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
   },
   terms: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textTertiary,
     textAlign: 'center',
+    marginTop: spacing.md,
   },
 });

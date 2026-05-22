@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Star, X } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
+import { Star, X, Check } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Screen } from '../../../components/ui/Screen';
+import { Input } from '../../../components/ui/Input';
+import { H3, Body, Caption } from '../../../components/ui/Typography';
 import { ratingsRepository } from '../../../data/repositories/ratings.repository';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing, borderRadius } from '../../../theme/designSystem';
 
 export function RatePlayerScreen({ playerId, playerName, matchId, onComplete, onCancel }: {
   playerId: string;
@@ -27,13 +28,12 @@ export function RatePlayerScreen({ playerId, playerName, matchId, onComplete, on
 
     setIsSubmitting(true);
     try {
-      // TODO: Get actual rater ID from auth context
       await ratingsRepository.submitRating({
         rater_id: 'demo-player',
         rated_id: playerId,
         match_id: matchId,
         rating,
-        comment: comment || null,
+        comment: comment.trim() || null,
       });
       Alert.alert('Calificación enviada', 'Gracias por tu calificación.');
       onComplete();
@@ -45,39 +45,50 @@ export function RatePlayerScreen({ playerId, playerName, matchId, onComplete, on
   };
 
   return (
-    <Screen title="Calificar jugador" subtitle={`¿Cómo fue jugar con ${playerName}?`}>
-      <Card style={styles.card}>
-        <Text style={styles.question}>Califica tu experiencia</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <H3>Calificar Jugador</H3>
+        <Body style={styles.subtitle}>¿Cómo fue jugar con {playerName}?</Body>
+      </View>
+
+      <Card variant="elevated" size="lg" style={styles.card}>
+        <Body style={styles.question}>Califica tu experiencia</Body>
         <View style={styles.starsContainer}>
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
               key={star}
-              color={star <= rating ? colors.accent : colors.surfaceMuted}
-              fill={star <= rating ? colors.accent : 'none'}
-              size={40}
+              color={star <= rating ? colors.primary : colors.border}
+              fill={star <= rating ? colors.primary : 'none'}
+              size={36}
               style={styles.star}
               onPress={() => setRating(star)}
             />
           ))}
         </View>
-        <Text style={styles.ratingLabel}>
-          {rating === 0 ? 'Selecciona una calificación' : `${rating} de 5`}
-        </Text>
+        <Caption style={styles.ratingLabel}>
+          {rating === 0 ? 'Toca una estrella para calificar' : `${rating} de 5 estrellas`}
+        </Caption>
       </Card>
 
-      <Card style={styles.card}>
-        <Text style={styles.question}>Comentario (opcional)</Text>
-        <Text style={styles.hint}>
-          Comparte tu experiencia para ayudar a otros jugadores.
-        </Text>
-        <Text style={styles.commentPlaceholder}>
-          {comment || 'Escribe un comentario...'}
-        </Text>
+      <Card variant="elevated" size="lg" style={styles.card}>
+        <Body style={styles.question}>Comentario (opcional)</Body>
+        <Caption style={styles.hint}>
+          Comparte tu experiencia para ayudar a mantener el fair play en la comunidad.
+        </Caption>
+        <Input
+          multiline
+          numberOfLines={3}
+          onChangeText={setComment}
+          placeholder="Ej: Muy buen jugador, gran actitud..."
+          value={comment}
+          variant="glass"
+          style={styles.textArea}
+        />
       </Card>
 
       <View style={styles.actions}>
         <Button
-          icon={<X color={colors.ink} size={18} />}
+          icon={<X size={16} color={colors.textPrimary} />}
           label="Cancelar"
           onPress={onCancel}
           style={styles.actionButton}
@@ -85,53 +96,72 @@ export function RatePlayerScreen({ playerId, playerName, matchId, onComplete, on
         />
         <Button
           disabled={isSubmitting || rating === 0}
-          label={isSubmitting ? 'Enviando...' : 'Enviar calificación'}
+          icon={<Check size={16} color={colors.background} />}
+          label={isSubmitting ? 'Enviando...' : 'Enviar'}
           onPress={handleSubmit}
           style={styles.actionButton}
+          variant="primary"
         />
       </View>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  header: {
+    marginTop: spacing.sm,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
   card: {
+    padding: spacing.lg,
     gap: spacing.md,
   },
   question: {
-    color: colors.ink,
-    fontSize: typography.body,
+    fontSize: 15,
     fontWeight: '700',
+    color: colors.textPrimary,
   },
   hint: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   starsContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
   },
   star: {
-    cursor: 'pointer',
+    marginHorizontal: spacing.xs,
   },
   ratingLabel: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '600',
+    color: colors.textTertiary,
+    fontSize: 12,
     textAlign: 'center',
   },
-  commentPlaceholder: {
-    color: colors.muted,
-    fontSize: typography.body,
-    fontStyle: 'italic',
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   actions: {
     flexDirection: 'row',
     gap: spacing.md,
+    marginTop: spacing.md,
   },
   actionButton: {
     flex: 1,
+    minHeight: 44,
   },
 });
+

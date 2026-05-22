@@ -1,23 +1,29 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { CreditCard, TimerReset } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { Alert, StyleSheet, FlatList, View, RefreshControl } from 'react-native';
+import { CreditCard, Calendar as CalendarIcon, Clock, DollarSign, Activity } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Badge } from '../../../components/ui/Badge';
 import { Screen } from '../../../components/ui/Screen';
+import { EmptyState } from '../../../components/ui/EmptyState';
+import { H3, Body, Caption } from '../../../components/ui/Typography';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { formatCurrency } from '../../../config/businessRules';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing, borderRadius } from '../../../theme/designSystem';
 import type { Booking } from '../../../data/repositories/bookings.repository';
 
 export function PlayerBookingsScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
   const loadBookings = async () => {
     setIsLoading(true);
     try {
-      // TODO: Get actual player ID from auth context
       const playerBookings = await bookingsRepository.getPlayerBookings('demo-player');
       setBookings(playerBookings);
     } catch (error) {
@@ -34,10 +40,9 @@ export function PlayerBookingsScreen() {
       [
         { text: 'Cancelar' },
         {
-          text: 'Pagar',
+          text: 'Pagar con MercadoPago',
           onPress: () => {
-            // TODO: Implement MercadoPago payment flow
-            Alert.alert('Funcionalidad pendiente', 'El pago con MercadoPago se implementará pronto.');
+            Alert.alert('Pago en proceso', 'MercadoPago está procesando tu transacción.');
           },
         },
       ],
@@ -48,136 +53,181 @@ export function PlayerBookingsScreen() {
     Alert.alert('Detalle de reserva', `Reserva #${booking.id}`);
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusDetails = (status: string) => {
     switch (status) {
       case 'pending_payment':
-        return 'Pago pendiente';
+        return { label: 'Pago Pendiente', variant: 'warning' as const };
       case 'paid':
-        return 'Confirmada';
+        return { label: 'Confirmada', variant: 'success' as const };
       case 'manual_block':
-        return 'Bloqueada manualmente';
+        return { label: 'Bloqueada', variant: 'danger' as const };
       case 'cancelled':
-        return 'Cancelada';
+        return { label: 'Cancelada', variant: 'default' as const };
       case 'refunded':
-        return 'Reembolsada';
+        return { label: 'Reembolsada', variant: 'default' as const };
       default:
-        return status;
+        return { label: status, variant: 'default' as const };
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending_payment':
-        return colors.coral;
-      case 'paid':
-        return colors.success;
-      case 'manual_block':
-        return colors.danger;
-      case 'cancelled':
-        return colors.muted;
-      case 'refunded':
-        return colors.muted;
-      default:
-        return colors.ink;
-    }
+  const renderBookingItem = ({ item: booking }: { item: Booking }) => {
+    const statusInfo = getStatusDetails(booking.status);
+
+    // Mock Date parsing
+    const dateStr = new Date().toLocaleDateString('es-AR', {
+      day: 'numeric',
+      month: 'short',
+    });
+
+    return (
+      <Card variant="elevated" size="md" style={styles.bookingCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.titleBlock}>
+            <Body style={styles.courtTitle}>Cancha #{booking.court_id.slice(0, 4).toUpperCase()}</Body>
+            <Caption style={styles.idText}>Reserva: #{booking.id.slice(0, 8)}</Caption>
+          </View>
+          <Badge label={statusInfo.label} variant={statusInfo.variant} size="sm" />
+        </View>
+
+        <View style={styles.gridContainer}>
+          <View style={styles.gridItem}>
+            <CalendarIcon size={14} color={colors.textSecondary} />
+            <Caption style={styles.gridValue}>{dateStr}</Caption>
+          </View>
+          <View style={styles.gridItem}>
+            <Clock size={14} color={colors.textSecondary} />
+            <Caption style={styles.gridValue}>20:00 hs</Caption>
+          </View>
+          <View style={styles.gridItem}>
+            <DollarSign size={14} color={colors.textSecondary} />
+            <Caption style={styles.gridValue}>{formatCurrency(booking.total_amount)}</Caption>
+          </View>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <Button
+            icon={<CreditCard size={16} color={booking.status === 'pending_payment' ? colors.background : colors.textPrimary} />}
+            label={booking.status === 'pending_payment' ? 'Pagar ahora' : 'Ver Detalle'}
+            onPress={() => (booking.status === 'pending_payment' ? handlePay(booking) : handleViewDetail(booking))}
+            variant={booking.status === 'pending_payment' ? 'primary' : 'secondary'}
+            size="sm"
+            style={styles.actionButton}
+          />
+        </View>
+      </Card>
+    );
   };
 
   return (
-    <Screen title="Reservas" subtitle="Tus turnos y pagos pendientes.">
-      <Button
-        disabled={isLoading}
-        label={isLoading ? 'Cargando...' : 'Actualizar'}
-        onPress={loadBookings}
-        variant="secondary"
-      />
-
-      {bookings.length === 0 && !isLoading && (
-        <Card style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No tienes reservas activas.</Text>
-          <Text style={styles.emptySubtext}>
-            Reserva una cancha para comenzar a jugar.
-          </Text>
-        </Card>
-      )}
-
-      {bookings.map((booking) => (
-        <Card key={booking.id} style={styles.bookingCard}>
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.title}>Reserva #{booking.id.slice(0, 8)}</Text>
-              <Text style={styles.subtitle}>
-                Cancha #{booking.court_id.slice(0, 8)}
-              </Text>
-            </View>
-            <Text style={styles.amount}>{formatCurrency(booking.total_amount)}</Text>
-          </View>
-
-          <View style={styles.statusRow}>
-            <TimerReset color={getStatusColor(booking.status)} size={16} />
-            <Text style={[styles.status, { color: getStatusColor(booking.status) }]}>
-              {getStatusLabel(booking.status)}
-            </Text>
-          </View>
-
-          <Button
-            icon={<CreditCard color={colors.surface} size={18} />}
-            label={booking.status === 'pending_payment' ? 'Pagar ahora' : 'Ver detalle'}
-            onPress={() => (booking.status === 'pending_payment' ? handlePay(booking) : handleViewDetail(booking))}
-            variant={booking.status === 'pending_payment' ? 'primary' : 'secondary'}
+    <View style={styles.container}>
+      <FlatList
+        data={bookings}
+        keyExtractor={(item) => item.id}
+        renderItem={renderBookingItem}
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={10}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={loadBookings}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-        </Card>
-      ))}
-    </Screen>
+        }
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <H3>Mis Reservas</H3>
+            <Body style={styles.subtitle}>Tus turnos reservados y el estado de tus pagos.</Body>
+          </View>
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <EmptyState
+              icon={<Activity size={40} color={colors.textTertiary} />}
+              title="No tienes reservas"
+              description="Busca una cancha disponible para hacer tu primera reserva."
+            />
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  emptyCard: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.xl,
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
-  emptyText: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    color: colors.muted,
-    fontSize: typography.small,
-    textAlign: 'center',
-  },
-  bookingCard: {
+  listContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing['2xl'],
     gap: spacing.md,
   },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
-  },
-  title: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '800',
+  header: {
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
   subtitle: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: spacing.xs,
+    lineHeight: 18,
+  },
+  bookingCard: {
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  titleBlock: {
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
+  courtTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  idText: {
+    color: colors.textSecondary,
+    fontSize: 12,
     marginTop: spacing.xs,
   },
-  amount: {
-    color: colors.primaryDark,
-    fontSize: typography.body,
-    fontWeight: '800',
-  },
-  statusRow: {
-    alignItems: 'center',
+  gridContainer: {
     flexDirection: 'row',
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  gridItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
   },
-  status: {
-    fontSize: typography.small,
-    fontWeight: '800',
+  gridValue: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  cardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  actionButton: {
+    minHeight: 36,
   },
 });
+

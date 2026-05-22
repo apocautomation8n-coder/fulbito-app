@@ -1,37 +1,40 @@
+import { colors as dsColors, spacing as dsSpacing, borderRadius as dsRadius } from './designSystem';
+
 export const colors = {
-  background: '#F7F8F3',
-  surface: '#FFFFFF',
-  surfaceMuted: '#EEF1EA',
-  ink: '#16211D',
-  muted: '#69736E',
-  primary: '#1F7A4D',
-  primaryDark: '#145638',
-  accent: '#E8B339',
-  coral: '#DE6B48',
-  border: '#DDE3DA',
-  danger: '#B13C31',
-  success: '#2F8F5B',
+  background: dsColors.background,
+  surface: dsColors.backgroundSecondary,
+  surfaceMuted: dsColors.card,
+  ink: dsColors.textPrimary,
+  muted: dsColors.textSecondary,
+  primary: dsColors.primary,
+  primaryDark: dsColors.primaryDark,
+  accent: dsColors.accent,
+  coral: '#FFC857', // Mapped to warning/coral color
+  border: dsColors.border,
+  danger: dsColors.danger,
+  success: dsColors.success,
 };
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
+  xs: dsSpacing.xs,
+  sm: dsSpacing.sm,
+  md: dsSpacing.md,
+  lg: dsSpacing.lg,
+  xl: dsSpacing.xl,
+  xxl: dsSpacing['2xl'],
 };
 
 export const radius = {
-  sm: 6,
-  md: 8,
+  sm: dsRadius.sm,
+  md: dsRadius.md,
 };
 
 export const typography = {
-  title: 30,
+  title: 28,
   h1: 24,
-  h2: 19,
-  body: 16,
-  small: 13,
+  h2: 20,
+  body: 14,
+  small: 12,
   tiny: 11,
 };
+

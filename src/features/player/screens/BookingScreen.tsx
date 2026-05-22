@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ArrowLeft, Calendar, Clock, DollarSign, MapPin, Users } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/Input';
+import { ProgressStepper } from '../../../components/ui/ProgressStepper';
+import { Badge } from '../../../components/ui/Badge';
+import { H2, H3, H4, Body, Caption } from '../../../components/ui/Typography';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { CreateMatchScreen } from './CreateMatchScreen';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing } from '../../../theme/designSystem';
 import type { PaymentCollectionMode } from '../../../types/domain';
+
 
 interface BookingScreenProps {
   courtId: string;
@@ -33,12 +38,20 @@ export function BookingScreen({
   onComplete,
   onCancel,
 }: BookingScreenProps) {
+  const [currentStep, setCurrentStep] = useState(1);
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
+
+
+  const steps = [
+    { id: '1', label: 'Horario', completed: currentStep > 1, current: currentStep === 1 },
+    { id: '2', label: 'Pago', completed: currentStep > 2, current: currentStep === 2 },
+    { id: '3', label: 'Confirmar', completed: currentStep > 3, current: currentStep === 3 },
+  ];
 
   const calculateAmounts = () => {
     const appCommission = pricePerSlot * businessRules.platformCommissionRate;
@@ -79,30 +92,27 @@ export function BookingScreen({
       const bookingStartTime = new Date(`${date}T${startTime}`);
       const bookingEndTime = new Date(`${date}T${endTime}`);
 
-      // Create time slot
       const slot = await bookingsRepository.createTimeSlot(
         courtId,
         bookingStartTime.toISOString(),
         bookingEndTime.toISOString(),
       );
 
-      // Hold the slot for payment
       const holdUntil = new Date(Date.now() + businessRules.paymentHoldMinutes * 60 * 1000);
       await bookingsRepository.holdSlot(slot.id, 'demo-player', holdUntil.toISOString());
 
       const amounts = calculateAmounts();
 
-      // Create booking (without payment for now - will be implemented with MercadoPago)
       const booking = await bookingsRepository.createBooking({
         slot_id: slot.id,
-        club_id: 'demo-club', // TODO: Get from court
+        club_id: 'demo-club',
         court_id: courtId,
         total_amount: amounts.totalAmount,
         amount_due_now: amounts.amountDueNow,
         app_commission: amounts.appCommission,
         club_amount: amounts.clubAmount,
         payment_mode: paymentMode,
-        player_id: 'demo-player', // TODO: Get from auth
+        player_id: 'demo-player',
       });
 
       setCreatedBookingId(booking.id);
@@ -142,125 +152,125 @@ export function BookingScreen({
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Button icon={<ArrowLeft color={colors.ink} size={20} />} label="" onPress={onCancel} variant="ghost" />
-          <Text style={styles.title}>Reservar cancha</Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <Card style={styles.infoCard}>
-          <Text style={styles.courtName}>{courtName}</Text>
-          <Text style={styles.clubName}>{clubName}</Text>
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <MapPin color={colors.muted} size={16} />
-              <Text style={styles.metaText}>{format}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Clock color={colors.muted} size={16} />
-              <Text style={styles.metaText}>{durationMinutes} min</Text>
-            </View>
+        <View>
+          <View style={styles.header}>
+            <Button icon={<ArrowLeft size={20} />} label="" onPress={onCancel} variant="ghost" size="sm" />
+            <H2>Reservar cancha</H2>
+            <View style={{ width: 40 }} />
           </View>
-        </Card>
 
-        <Card style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Selecciona horario</Text>
+          <ProgressStepper steps={steps} style={styles.stepper} />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Fecha</Text>
-            <View style={styles.inputWrapper}>
-              <Calendar color={colors.muted} size={20} style={styles.inputIcon} />
-              <TextInput
+          <Card variant="glass" size="lg" style={styles.infoCard}>
+            <H3>{courtName}</H3>
+            <Body style={styles.clubName}>{clubName}</Body>
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <MapPin size={16} color={colors.textSecondary} />
+                <Caption>{format}</Caption>
+              </View>
+              <View style={styles.metaItem}>
+                <Clock size={16} color={colors.textSecondary} />
+                <Caption>{durationMinutes} min</Caption>
+              </View>
+            </View>
+          </Card>
+
+          <Card variant="elevated" size="lg" style={styles.formCard}>
+            <H4 style={styles.sectionTitle}>Selecciona horario</H4>
+
+            <View style={styles.inputGroup}>
+              <Input
                 keyboardType="numbers-and-punctuation"
                 onChangeText={setDate}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
+                placeholder="Fecha (DD/MM/YYYY)"
                 value={date}
+                variant="glass"
+                leftIcon={<Calendar size={20} color={colors.textSecondary} />}
               />
             </View>
-          </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.half]}>
-              <Text style={styles.label}>Inicio</Text>
-              <View style={styles.inputWrapper}>
-                <Clock color={colors.muted} size={20} style={styles.inputIcon} />
-                <TextInput
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.half]}>
+                <Input
                   keyboardType="numbers-and-punctuation"
                   onChangeText={setStartTime}
-                  placeholder="HH:MM"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
+                  placeholder="Inicio (HH:MM)"
                   value={startTime}
+                  variant="glass"
+                  leftIcon={<Clock size={20} color={colors.textSecondary} />}
                 />
               </View>
-            </View>
 
-            <View style={[styles.inputGroup, styles.half]}>
-              <Text style={styles.label}>Fin</Text>
-              <View style={styles.inputWrapper}>
-                <Clock color={colors.muted} size={20} style={styles.inputIcon} />
-                <TextInput
+              <View style={[styles.inputGroup, styles.half]}>
+                <Input
                   keyboardType="numbers-and-punctuation"
                   onChangeText={setEndTime}
-                  placeholder="HH:MM"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
+                  placeholder="Fin (HH:MM)"
                   value={endTime}
+                  variant="glass"
+                  leftIcon={<Clock size={20} color={colors.textSecondary} />}
                 />
               </View>
             </View>
-          </View>
-        </Card>
+          </Card>
 
-        <Card style={styles.priceCard}>
-          <Text style={styles.sectionTitle}>Resumen de pago</Text>
+          <Card variant="elevated" size="lg" style={styles.priceCard}>
+            <H4 style={styles.sectionTitle}>Resumen de pago</H4>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Precio del turno</Text>
-            <Text style={styles.priceValue}>{formatCurrency(amounts.totalAmount)}</Text>
-          </View>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Comisión Fulbito (5%)</Text>
-            <Text style={styles.priceValue}>{formatCurrency(amounts.appCommission)}</Text>
-          </View>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>
-              {paymentMode === 'full' ? 'Pago a realizar' : 'Seña (50%)'}
-            </Text>
-            <Text style={[styles.priceValue, styles.priceValueHighlight]}>
-              {formatCurrency(amounts.amountDueNow)}
-            </Text>
-          </View>
-
-          {paymentMode === 'deposit' && (
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Resto a pagar en el lugar</Text>
-              <Text style={styles.priceValue}>{formatCurrency(amounts.totalAmount - amounts.amountDueNow)}</Text>
+              <Body>Precio del turno</Body>
+              <Body style={styles.priceValue}>{formatCurrency(amounts.totalAmount)}</Body>
             </View>
-          )}
 
-          <View style={styles.divider} />
+            <View style={styles.priceRow}>
+              <Caption>Comisión Fulbito (5%)</Caption>
+              <Caption style={styles.priceValue}>{formatCurrency(amounts.appCommission)}</Caption>
+            </View>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatCurrency(amounts.totalAmount)}</Text>
+            <View style={styles.priceRow}>
+              <Body style={styles.priceLabelHighlight}>
+                {paymentMode === 'full' ? 'Pago a realizar' : 'Seña (50%)'}
+              </Body>
+              <H3 style={styles.priceValueHighlight}>
+                {formatCurrency(amounts.amountDueNow)}
+              </H3>
+            </View>
+
+            {paymentMode === 'deposit' && (
+              <View style={styles.priceRow}>
+                <Caption>Resto a pagar en el lugar</Caption>
+                <Caption style={styles.priceValue}>
+                  {formatCurrency(amounts.totalAmount - amounts.amountDueNow)}
+                </Caption>
+              </View>
+            )}
+
+            <View style={styles.divider} />
+
+            <View style={styles.priceRow}>
+              <H4>Total</H4>
+              <H3 style={styles.totalValue}>{formatCurrency(amounts.totalAmount)}</H3>
+            </View>
+          </Card>
+
+          <Button
+            disabled={isSubmitting}
+            label={isSubmitting ? 'Procesando...' : 'Confirmar reserva'}
+            onPress={handleBooking}
+            variant="glow"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
+          />
+
+          <View style={styles.infoContainer}>
+            <Badge label={`Tienes ${businessRules.paymentHoldMinutes} minutos para completar el pago`} variant="default" />
+            <Caption style={styles.info}>
+              La reserva se cancelará automáticamente si no se paga.
+            </Caption>
           </View>
-        </Card>
-
-        <Button
-          disabled={isSubmitting}
-          label={isSubmitting ? 'Procesando...' : 'Confirmar reserva'}
-          onPress={handleBooking}
-        />
-
-        <Text style={styles.info}>
-          Tienes {businessRules.paymentHoldMinutes} minutos para completar el pago. La reserva se
-          cancelará automáticamente si no se paga.
-        </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -279,48 +289,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: spacing.lg,
   },
-  title: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '800',
+  stepper: {
+    marginBottom: spacing.lg,
   },
   infoCard: {
-    gap: spacing.sm,
-  },
-  courtName: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '700',
+    padding: spacing.lg,
   },
   clubName: {
-    color: colors.muted,
-    fontSize: typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   metaRow: {
     flexDirection: 'row',
     gap: spacing.lg,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   metaItem: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.xs,
   },
-  metaText: {
-    color: colors.muted,
-    fontSize: typography.small,
-  },
   formCard: {
-    gap: spacing.md,
+    padding: spacing.lg,
   },
   sectionTitle: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '700',
+    marginBottom: spacing.lg,
   },
   inputGroup: {
-    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   half: {
     flex: 1,
@@ -329,72 +327,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  label: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: spacing.md,
-    zIndex: 1,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: typography.body,
-    minHeight: 48,
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.md,
-    width: '100%',
-  },
   priceCard: {
-    gap: spacing.md,
+    padding: spacing.lg,
   },
   priceRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  priceLabel: {
-    color: colors.muted,
-    fontSize: typography.small,
+    marginBottom: spacing.sm,
   },
   priceValue: {
-    color: colors.ink,
-    fontSize: typography.body,
     fontWeight: '600',
   },
+  priceLabelHighlight: {
+    color: colors.primary,
+  },
   priceValueHighlight: {
-    color: colors.primaryDark,
-    fontSize: typography.h2,
-    fontWeight: '800',
+    color: colors.primary,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
-  },
-  totalLabel: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '700',
+    backgroundColor: colors.glassBorder,
+    marginVertical: spacing.md,
   },
   totalValue: {
-    color: colors.primaryDark,
-    fontSize: typography.h2,
-    fontWeight: '800',
+    color: colors.primary,
+  },
+  infoContainer: {
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   info: {
-    color: colors.muted,
-    fontSize: typography.small,
-    lineHeight: 20,
+    color: colors.textTertiary,
     textAlign: 'center',
+    lineHeight: 20,
   },
 });

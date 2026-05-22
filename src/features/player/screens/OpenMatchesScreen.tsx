@@ -1,19 +1,24 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Calendar, Clock, DollarSign, MapPin, Users } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { Alert, StyleSheet, FlatList, View, RefreshControl } from 'react-native';
+import { Calendar, Clock, DollarSign, MapPin, Users, RefreshCw, Activity } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Screen } from '../../../components/ui/Screen';
+import { Badge } from '../../../components/ui/Badge';
+import { EmptyState } from '../../../components/ui/EmptyState';
+import { H3, Body, Caption } from '../../../components/ui/Typography';
 import { matchesRepository } from '../../../data/repositories/matches.repository';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing, borderRadius } from '../../../theme/designSystem';
 import type { Match } from '../../../data/repositories/matches.repository';
 
 export function OpenMatchesScreen() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+
+  useEffect(() => {
+    loadMatches();
+  }, []);
 
   const loadMatches = async () => {
     setIsLoading(true);
@@ -37,7 +42,6 @@ export function OpenMatchesScreen() {
           text: 'Unirse',
           onPress: async () => {
             try {
-              // TODO: Get actual player ID from auth context
               await matchesRepository.requestToJoin({
                 match_id: match.id,
                 player_id: 'demo-player',
@@ -57,179 +61,261 @@ export function OpenMatchesScreen() {
     return match.spots_total - match.spots_taken;
   };
 
-  const getSpotsLabel = (match: Match) => {
-    const available = getSpotsAvailable(match);
-    if (available === 0) return 'Completo';
-    if (available <= 2) return `${available} lugares`;
-    return `${available}/${match.spots_total} lugares`;
+  const renderMatchCard = ({ item: match }: { item: Match }) => {
+    const spotsAvailable = getSpotsAvailable(match);
+    const isFull = spotsAvailable === 0;
+
+    // Format dates cleanly
+    const matchDate = new Date(match.created_at);
+    const formattedDate = matchDate.toLocaleDateString('es-AR', {
+      day: 'numeric',
+      month: 'short',
+    });
+    const formattedTime = matchDate.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }) + ' hs';
+
+    return (
+      <Card variant="elevated" size="md" style={styles.matchCard}>
+        {/* Main Header: Court & Distance */}
+        <View style={styles.cardHeader}>
+          <View style={styles.titleContainer}>
+            <Body style={styles.courtName}>{match.description || 'Partido F5'}</Body>
+            <View style={styles.locationContainer}>
+              <MapPin size={12} color={colors.textSecondary} />
+              <Caption style={styles.locationText}>Club Centenario · 1.5 km</Caption>
+            </View>
+          </View>
+          <Badge
+            label={isFull ? 'Completo' : `Quedan ${spotsAvailable} spots`}
+            variant={isFull ? 'default' : 'accent'}
+            size="sm"
+          />
+        </View>
+
+        {/* Info Grid for Quick Scanning */}
+        <View style={styles.gridContainer}>
+          <View style={styles.gridItem}>
+            <Clock size={14} color={colors.textSecondary} />
+            <Caption style={styles.gridValue}>{formattedTime}</Caption>
+          </View>
+          <View style={styles.gridItem}>
+            <Calendar size={14} color={colors.textSecondary} />
+            <Caption style={styles.gridValue}>{formattedDate}</Caption>
+          </View>
+          <View style={styles.gridItem}>
+            <Activity size={14} color={colors.textSecondary} />
+            <Caption style={styles.gridValue}>Nivel: Medio</Caption>
+          </View>
+        </View>
+
+        {/* Players capacity bar (Spotify-like visual cues) */}
+        <View style={styles.progressBarBg}>
+          <View 
+            style={[
+              styles.progressBarFill, 
+              { width: `${(match.spots_taken / match.spots_total) * 100}%` }
+            ]} 
+          />
+        </View>
+        <View style={styles.progressLabelContainer}>
+          <Caption style={styles.progressLabel}>
+            {match.spots_taken} de {match.spots_total} listos
+          </Caption>
+          <Caption style={styles.pricePerPlayer}>
+            {formatCurrency(match.price_per_player)} / jug
+          </Caption>
+        </View>
+
+        {/* Split Payment Badge & CTA */}
+        <View style={styles.cardFooter}>
+          {match.is_split_payment ? (
+            <View style={styles.splitPaymentBadge}>
+              <DollarSign size={12} color={colors.primary} />
+              <Caption style={styles.splitPaymentText}>Pago Dividido</Caption>
+            </View>
+          ) : (
+            <View />
+          )}
+
+          <Button
+            disabled={isFull}
+            label={isFull ? 'Completo' : 'Unirse al Partido'}
+            onPress={() => handleJoinMatch(match)}
+            variant={isFull ? 'secondary' : 'primary'}
+            size="sm"
+            style={styles.joinButton}
+          />
+        </View>
+      </Card>
+    );
   };
 
   return (
-    <Screen title="Partidos abiertos" subtitle="Únete a partidos abiertos por otros jugadores.">
-      <Button
-        disabled={isLoading}
-        label={isLoading ? 'Cargando...' : 'Actualizar'}
-        onPress={loadMatches}
-        variant="secondary"
-      />
-
-      {matches.length === 0 && !isLoading && (
-        <Card style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No hay partidos abiertos en este momento.</Text>
-          <Text style={styles.emptySubtext}>
-            Vuelve más tarde para ver partidos disponibles.
-          </Text>
-        </Card>
-      )}
-
-      {matches.map((match) => {
-        const spotsAvailable = getSpotsAvailable(match);
-        const isFull = spotsAvailable === 0;
-
-        return (
-          <Card key={match.id} style={styles.matchCard}>
-            <View style={styles.matchHeader}>
-              <View>
-                <Text style={styles.matchTitle}>Partido abierto</Text>
-                <Text style={styles.matchSubtitle}>{match.description || 'Sin descripción'}</Text>
-              </View>
-              <View style={[styles.spotsBadge, isFull && styles.spotsBadgeFull]}>
-                <Users color={isFull ? colors.ink : colors.surface} size={14} />
-                <Text style={[styles.spotsText, isFull && styles.spotsTextFull]}>
-                  {getSpotsLabel(match)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.matchMeta}>
-              <View style={styles.metaItem}>
-                <Calendar color={colors.muted} size={16} />
-                <Text style={styles.metaText}>
-                  {new Date(match.created_at).toLocaleDateString('es-AR', {
-                    day: 'numeric',
-                    month: 'short',
-                  })}
-                </Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Clock color={colors.muted} size={16} />
-                <Text style={styles.metaText}>
-                  {new Date(match.created_at).toLocaleTimeString('es-AR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.matchMeta}>
-              <View style={styles.metaItem}>
-                <MapPin color={colors.muted} size={16} />
-                <Text style={styles.metaText}>Córdoba</Text>
-              </View>
-              <View style={styles.metaItem}>
-                <DollarSign color={colors.muted} size={16} />
-                <Text style={styles.metaText}>{formatCurrency(match.price_per_player)}</Text>
-              </View>
-            </View>
-
-            {match.is_split_payment && (
-              <View style={styles.splitInfo}>
-                <Text style={styles.splitText}>
-                  Pagos divididos · Deadline: {businessRules.defaultSplitDeadlineHoursBeforeKickoff}h antes
-                </Text>
-              </View>
-            )}
-
-            <Button
-              disabled={isFull}
-              label={isFull ? 'Completo' : 'Unirse'}
-              onPress={() => handleJoinMatch(match)}
-              variant={isFull ? 'secondary' : 'primary'}
+    <View style={styles.container}>
+      <FlatList
+        data={matches}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMatchCard}
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={8}
+        windowSize={5}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={loadMatches}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <H3>Partidos Abiertos</H3>
+            <Body style={styles.subtitle}>Únete a partidos organizados por la comunidad en tiempo real</Body>
+          </View>
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <EmptyState
+              icon={<Activity size={40} color={colors.textTertiary} />}
+              title="No hay partidos abiertos"
+              description="Vuelve más tarde para ver partidos disponibles en tu zona."
             />
-          </Card>
-        );
-      })}
-    </Screen>
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  emptyCard: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.xl,
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
-  emptyText: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    color: colors.muted,
-    fontSize: typography.small,
-    textAlign: 'center',
-  },
-  matchCard: {
+  listContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing['2xl'],
     gap: spacing.md,
   },
-  matchHeader: {
-    alignItems: 'center',
+  header: {
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: spacing.xs,
+    lineHeight: 18,
+  },
+  matchCard: {
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
   },
-  matchTitle: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '800',
+  titleContainer: {
+    flex: 1,
+    paddingRight: spacing.sm,
   },
-  matchSubtitle: {
-    color: colors.muted,
-    fontSize: typography.small,
+  courtName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     marginTop: spacing.xs,
   },
-  spotsBadge: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
+  locationText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  gridContainer: {
     flexDirection: 'row',
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  gridItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
+  },
+  gridValue: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+  },
+  progressLabelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  progressLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  pricePerPlayer: {
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  splitPaymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(101, 243, 106, 0.08)',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
-  spotsBadgeFull: {
-    backgroundColor: colors.surfaceMuted,
+  splitPaymentText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 10,
   },
-  spotsText: {
-    color: colors.surface,
-    fontSize: typography.tiny,
-    fontWeight: '700',
-  },
-  spotsTextFull: {
-    color: colors.ink,
-  },
-  matchMeta: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  metaItem: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  metaText: {
-    color: colors.muted,
-    fontSize: typography.small,
-  },
-  splitInfo: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    padding: spacing.sm,
-  },
-  splitText: {
-    color: colors.ink,
-    fontSize: typography.tiny,
-    textAlign: 'center',
+  joinButton: {
+    minHeight: 34,
+    paddingHorizontal: spacing.md,
   },
 });
+

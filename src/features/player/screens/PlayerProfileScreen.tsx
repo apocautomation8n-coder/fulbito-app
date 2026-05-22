@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Calendar, ChevronRight, Edit2, Flag, LogOut, ShieldCheck, Star, Trash2, User, UserX } from 'lucide-react-native';
+import { Alert, Pressable, StyleSheet, ScrollView, View } from 'react-native';
+import { Calendar, ChevronRight, Edit2, Flag, LogOut, ShieldCheck, Star, Trophy, Trash2, User, Zap } from 'lucide-react-native';
 
 import { useAuth } from '../../../core/providers/AuthProvider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Screen } from '../../../components/ui/Screen';
+import { Badge } from '../../../components/ui/Badge';
+import { H1, H3, H4, Body, Caption } from '../../../components/ui/Typography';
 import { businessRules } from '../../../config/businessRules';
 import { company } from '../../../config/company';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing, borderRadius } from '../../../theme/designSystem';
+
 
 export function PlayerProfileScreen() {
   const { signOut, user } = useAuth();
   const [showEditProfile, setShowEditProfile] = useState(false);
+
 
   const handleDeleteAccount = async () => {
     Alert.alert(
@@ -25,8 +28,6 @@ export function PlayerProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO: Implement actual account deletion using profiles service
-              // await profilesService.deleteAccount(user?.id);
               Alert.alert(
                 'Cuenta eliminada',
                 'Tu cuenta ha sido eliminada exitosamente.',
@@ -70,8 +71,6 @@ export function PlayerProfileScreen() {
           text: 'Enviar',
           onPress: async () => {
             try {
-              // TODO: Implement actual report submission using profiles service
-              // await profilesService.submitReport({ reason, targetUserId: user?.id });
               Alert.alert('Reporte enviado', 'Tu reporte ha sido enviado y será revisado.');
             } catch (error) {
               Alert.alert('Error', 'No pudimos enviar tu reporte. Por favor intenta nuevamente.');
@@ -83,160 +82,209 @@ export function PlayerProfileScreen() {
   };
 
   if (showEditProfile) {
-    // TODO: Create EditPlayerProfileScreen
     return null;
   }
 
   return (
-    <Screen title="Perfil" subtitle={user?.email}>
-      <Card style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <User color={colors.primary} size={28} />
-        </View>
-        <View style={styles.profileText}>
-          <Text style={styles.name}>{user?.fullName}</Text>
-          <Text style={styles.muted}>Jugador · {businessRules.minimumAge}+</Text>
-        </View>
-      </Card>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View>
+        <Card variant="gradient" size="lg" style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <User color={colors.background} size={32} />
+            </View>
+            <View style={styles.levelBadge}>
+              <Badge label="LVL 1" variant="accent" size="sm" />
+            </View>
+          </View>
+          <View style={styles.profileText}>
+            <H1 style={styles.name}>{user?.fullName}</H1>
+            <Body style={styles.muted}>Jugador · {businessRules.minimumAge}+</Body>
+          </View>
+          <View style={styles.xpBar}>
+            <View style={styles.xpFill} />
+          </View>
+          <Caption style={styles.xpText}>0 / 100 XP</Caption>
+        </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Información personal</Text>
-        <Pressable style={styles.item} onPress={() => setShowEditProfile(true)}>
-          <View style={styles.itemLeft}>
-            <Edit2 color={colors.ink} size={18} />
-            <Text style={styles.itemText}>Editar perfil</Text>
-          </View>
-          <ChevronRight color={colors.muted} size={16} />
-        </Pressable>
-        <View style={styles.item}>
-          <View style={styles.itemLeft}>
-            <Calendar color={colors.ink} size={18} />
-            <Text style={styles.itemText}>Fecha de nacimiento</Text>
-          </View>
-          <Text style={styles.itemValue}>Pendiente</Text>
+        <View style={styles.statsRow}>
+          <Card variant="glass" size="md" style={styles.statCard}>
+            <Star size={24} color={colors.accent} />
+            <H3 style={styles.statValue}>0.0</H3>
+            <Caption>Rating</Caption>
+          </Card>
+          <Card variant="glass" size="md" style={styles.statCard}>
+            <Trophy size={24} color={colors.primary} />
+            <H3 style={styles.statValue}>0</H3>
+            <Caption>Partidos</Caption>
+          </Card>
+          <Card variant="glass" size="md" style={styles.statCard}>
+            <Zap size={24} color={colors.warning} />
+            <H3 style={styles.statValue}>0</H3>
+            <Caption>Streak</Caption>
+          </Card>
         </View>
-      </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Estadísticas</Text>
-        <View style={styles.item}>
-          <View style={styles.itemLeft}>
-            <Star color={colors.accent} size={18} />
-            <Text style={styles.itemText}>Rating promedio</Text>
+        <Card variant="elevated" size="lg" style={styles.listCard}>
+          <H4 style={styles.sectionTitle}>Información personal</H4>
+          <Pressable style={styles.item} onPress={() => setShowEditProfile(true)}>
+            <View style={styles.itemLeft}>
+              <Edit2 size={20} color={colors.textPrimary} />
+              <Body>Editar perfil</Body>
+            </View>
+            <ChevronRight size={20} color={colors.textTertiary} />
+          </Pressable>
+          <View style={styles.item}>
+            <View style={styles.itemLeft}>
+              <Calendar size={20} color={colors.textPrimary} />
+              <Body>Fecha de nacimiento</Body>
+            </View>
+            <Badge label="Pendiente" variant="default" size="sm" />
           </View>
-          <Text style={styles.itemValue}>0.0</Text>
-        </View>
-        <View style={styles.item}>
-          <View style={styles.itemLeft}>
-            <ShieldCheck color={colors.success} size={18} />
-            <Text style={styles.itemText}>Partidos jugados</Text>
-          </View>
-          <Text style={styles.itemValue}>0</Text>
-        </View>
-      </Card>
+        </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.sectionTitle}>Cuenta</Text>
-        <Pressable style={styles.item} onPress={handleDeleteAccount}>
-          <View style={styles.itemLeft}>
-            <Trash2 color={colors.danger} size={18} />
-            <Text style={[styles.itemText, styles.dangerText]}>Eliminar cuenta</Text>
-          </View>
-          <ChevronRight color={colors.muted} size={16} />
-        </Pressable>
-        <Pressable style={styles.item} onPress={handleReportUser}>
-          <View style={styles.itemLeft}>
-            <Flag color={colors.coral} size={18} />
-            <Text style={styles.itemText}>Reportar problema</Text>
-          </View>
-          <ChevronRight color={colors.muted} size={16} />
-        </Pressable>
-      </Card>
+        <Card variant="elevated" size="lg" style={styles.listCard}>
+          <H4 style={styles.sectionTitle}>Cuenta</H4>
+          <Pressable style={styles.item} onPress={handleDeleteAccount}>
+            <View style={styles.itemLeft}>
+              <Trash2 size={20} color={colors.danger} />
+              <Body style={styles.dangerText}>Eliminar cuenta</Body>
+            </View>
+            <ChevronRight size={20} color={colors.textTertiary} />
+          </Pressable>
+          <Pressable style={styles.item} onPress={handleReportUser}>
+            <View style={styles.itemLeft}>
+              <Flag size={20} color={colors.textPrimary} />
+              <Body>Reportar problema</Body>
+            </View>
+            <ChevronRight size={20} color={colors.textTertiary} />
+          </Pressable>
+        </Card>
 
-      <Card style={styles.list}>
-        <Text style={styles.supportTitle}>Soporte</Text>
-        <Text style={styles.supportText}>{company.supportEmail}</Text>
-        <Text style={styles.supportText}>{company.website}</Text>
-        <Text style={styles.supportText}>{company.copyright}</Text>
-      </Card>
+        <Card variant="glass" size="md" style={styles.supportCard}>
+          <Caption style={styles.supportTitle}>Soporte</Caption>
+          <Caption style={styles.supportText}>{company.supportEmail}</Caption>
+          <Caption style={styles.supportText}>{company.website}</Caption>
+          <Caption style={styles.supportText}>{company.copyright}</Caption>
+        </Card>
 
-      <Button
-        icon={<LogOut color={colors.ink} size={18} />}
-        label="Salir"
-        onPress={signOut}
-        variant="secondary"
-      />
-    </Screen>
+        <Button
+          icon={<LogOut size={18} />}
+          label="Salir"
+          onPress={signOut}
+          variant="secondary"
+          size="lg"
+          fullWidth
+        />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
   profileCard: {
+    padding: spacing.xl,
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: spacing.md,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: 8,
-    height: 56,
+    backgroundColor: colors.primary,
+    borderRadius: 32,
+    height: 64,
     justifyContent: 'center',
-    width: 56,
+    width: 64,
+  },
+  levelBadge: {
+    position: 'absolute',
+    bottom: -8,
+    right: -8,
   },
   profileText: {
-    flex: 1,
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   name: {
-    color: colors.ink,
-    fontSize: typography.h2,
-    fontWeight: '800',
+    color: colors.textPrimary,
   },
   muted: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  list: {
+  xpBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  xpFill: {
+    width: '0%',
+    height: '100%',
+    backgroundColor: colors.accent,
+  },
+  xpText: {
+    color: colors.textTertiary,
+  },
+  statsRow: {
+    flexDirection: 'row',
     gap: spacing.md,
   },
+  statCard: {
+    flex: 1,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  statValue: {
+    color: colors.textPrimary,
+  },
+  listCard: {
+    padding: spacing.lg,
+  },
   sectionTitle: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   item: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
   },
   itemLeft: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     flex: 1,
-  },
-  itemText: {
-    color: colors.ink,
-    fontSize: typography.body,
-  },
-  itemValue: {
-    color: colors.muted,
-    fontSize: typography.small,
-    fontWeight: '600',
   },
   dangerText: {
     color: colors.danger,
   },
+  supportCard: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
   supportTitle: {
-    color: colors.ink,
-    fontSize: typography.body,
-    fontWeight: '800',
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
   supportText: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textTertiary,
+    marginBottom: spacing.xs,
   },
 });

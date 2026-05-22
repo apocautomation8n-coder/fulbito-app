@@ -1,21 +1,24 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Apple, LogIn, Mail, UserPlus } from 'lucide-react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { Apple, LogIn, Mail, UserPlus, Trophy, Users, Shield } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { SegmentedControl } from '../../../components/ui/SegmentedControl';
+import { Input } from '../../../components/ui/Input';
+import { Chip } from '../../../components/ui/Chip';
+import { H1, H2, Body, Caption } from '../../../components/ui/Typography';
 import { SignUpScreen } from './SignUpScreen';
 import { businessRules } from '../../../config/businessRules';
 import { company } from '../../../config/company';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { colors, spacing, borderRadius } from '../../../theme/designSystem';
 import type { UserRole } from '../../../types/domain';
 import { useAuth } from '../../../core/providers/AuthProvider';
 
-const roleOptions: Array<{ label: string; value: UserRole }> = [
-  { label: 'Jugador', value: 'player' },
-  { label: 'Club', value: 'club' },
-  { label: 'Admin', value: 'admin' },
+
+const roleOptions: Array<{ label: string; value: UserRole; icon: React.ReactNode }> = [
+  { label: 'Jugador', value: 'player', icon: <Users size={16} color={colors.textSecondary} /> },
+  { label: 'Club', value: 'club', icon: <Trophy size={16} color={colors.textSecondary} /> },
+  { label: 'Admin', value: 'admin', icon: <Shield size={16} color={colors.textSecondary} /> },
 ];
 
 export function AuthScreen() {
@@ -25,6 +28,7 @@ export function AuthScreen() {
   const [role, setRole] = useState<UserRole>('player');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
+
 
   const handlePasswordSignIn = async () => {
     setIsSubmitting(true);
@@ -58,79 +62,99 @@ export function AuthScreen() {
       style={styles.container}
     >
       <View style={styles.hero}>
-        <Text style={styles.brand}>{businessRules.appName}</Text>
-        <Text style={styles.tagline}>Canchas, pagos y partidos en Cordoba.</Text>
+        <H1 style={styles.brand}>{businessRules.appName}</H1>
+        <Body style={styles.tagline}>Canchas, pagos y partidos en Córdoba.</Body>
+        <View style={styles.accentLine} />
       </View>
 
-      <Card style={styles.form}>
-        <SegmentedControl value={role} options={roleOptions} onChange={setRole} />
-
-        <View style={styles.inputs}>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="Email"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={email}
-          />
-          <TextInput
-            onChangeText={setPassword}
-            placeholder="Contrasena"
-            placeholderTextColor={colors.muted}
-            secureTextEntry
-            style={styles.input}
-            value={password}
-          />
-        </View>
-
-        <Button
-          disabled={isSubmitting}
-          icon={<LogIn color={colors.surface} size={18} />}
-          label={isConfigured ? 'Entrar' : 'Entrar demo'}
-          onPress={handlePasswordSignIn}
-        />
-
-        <View style={styles.oauthRow}>
-          <Button
-            disabled={isSubmitting}
-            icon={<Mail color={colors.ink} size={18} />}
-            label="Google"
-            onPress={() => handleOAuth('google')}
-            style={styles.oauthButton}
-            variant="secondary"
-          />
-          <Button
-            disabled={isSubmitting}
-            icon={<Apple color={colors.ink} size={18} />}
-            label="Apple"
-            onPress={() => handleOAuth('apple')}
-            style={styles.oauthButton}
-            variant="secondary"
-          />
-        </View>
-
-        {isConfigured && (
-          <Button
-            icon={<UserPlus color={colors.ink} size={18} />}
-            label="Crear cuenta"
-            onPress={() => setShowSignUp(true)}
-            variant="ghost"
-          />
-        )}
-
-        {!isConfigured ? (
-          <View style={styles.demoRow}>
-            <Button label="Jugador" onPress={() => signInDemo('player')} variant="ghost" />
-            <Button label="Club" onPress={() => signInDemo('club')} variant="ghost" />
-            <Button label="Admin" onPress={() => signInDemo('admin')} variant="ghost" />
+      <View style={styles.formContainer}>
+        <Card variant="glass" size="lg" style={styles.formCard}>
+          <View style={styles.roleSelector}>
+            {roleOptions.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                icon={option.icon}
+                selected={role === option.value}
+                onSelect={() => setRole(option.value)}
+                variant={role === option.value ? 'primary' : 'outline'}
+                size="md"
+              />
+            ))}
           </View>
-        ) : null}
-      </Card>
 
-      <Text style={styles.terms}>18+ · Pago online · Clubes verificados · {company.legalName}</Text>
+          <View style={styles.inputs}>
+            <Input
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              onChangeText={setEmail}
+              placeholder="Email"
+              value={email}
+              variant="glass"
+            />
+            <Input
+              onChangeText={setPassword}
+              placeholder="Contraseña"
+              secureTextEntry
+              value={password}
+              variant="glass"
+            />
+          </View>
+
+          <Button
+            disabled={isSubmitting}
+            icon={<LogIn size={18} />}
+            label={isConfigured ? 'Entrar' : 'Entrar demo'}
+            onPress={handlePasswordSignIn}
+            variant="glow"
+            size="lg"
+            fullWidth
+          />
+
+          <View style={styles.oauthRow}>
+            <Button
+              disabled={isSubmitting}
+              icon={<Mail size={18} />}
+              label="Google"
+              onPress={() => handleOAuth('google')}
+              style={styles.oauthButton}
+              variant="secondary"
+              size="md"
+            />
+            <Button
+              disabled={isSubmitting}
+              icon={<Apple size={18} />}
+              label="Apple"
+              onPress={() => handleOAuth('apple')}
+              style={styles.oauthButton}
+              variant="secondary"
+              size="md"
+            />
+          </View>
+
+          {isConfigured && (
+            <Button
+              icon={<UserPlus size={18} />}
+              label="Crear cuenta"
+              onPress={() => setShowSignUp(true)}
+              variant="ghost"
+              size="md"
+              fullWidth
+            />
+          )}
+
+          {!isConfigured && (
+            <View style={styles.demoRow}>
+              <Button label="Jugador" onPress={() => signInDemo('player')} variant="ghost" size="sm" />
+              <Button label="Club" onPress={() => signInDemo('club')} variant="ghost" size="sm" />
+              <Button label="Admin" onPress={() => signInDemo('admin')} variant="ghost" size="sm" />
+            </View>
+          )}
+        </Card>
+      </View>
+
+      <Caption style={styles.terms}>18+ · Pago online · Clubes verificados · {company.legalName}</Caption>
     </KeyboardAvoidingView>
   );
 }
@@ -144,36 +168,42 @@ const styles = StyleSheet.create({
   },
   hero: {
     marginBottom: spacing.xl,
+    alignItems: 'center',
   },
   brand: {
-    color: colors.ink,
-    fontSize: typography.title,
-    fontWeight: '900',
+    color: colors.primary,
+    marginBottom: spacing.sm,
   },
   tagline: {
-    color: colors.muted,
-    fontSize: typography.body,
-    marginTop: spacing.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
-  form: {
-    gap: spacing.lg,
+  accentLine: {
+    width: 60,
+    height: 4,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    marginTop: spacing.md,
+  },
+  formContainer: {
+    marginBottom: spacing.xl,
+  },
+  formCard: {
+    padding: spacing.xl,
+  },
+  roleSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
   },
   inputs: {
     gap: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: typography.body,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
   },
   oauthRow: {
     flexDirection: 'row',
     gap: spacing.md,
+    marginBottom: spacing.md,
   },
   oauthButton: {
     flex: 1,
@@ -181,11 +211,10 @@ const styles = StyleSheet.create({
   demoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   terms: {
-    color: colors.muted,
-    fontSize: typography.small,
-    marginTop: spacing.lg,
+    color: colors.textTertiary,
     textAlign: 'center',
   },
 });
