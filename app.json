@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "description": "Fulbito conecta jugadores y clubes de futbol en Cordoba para reservar canchas, dividir pagos y armar partidos.",
     "userInterfaceStyle": "light",
-    "jsEngine": "jsc",
     "scheme": "fulbito",
     "ios": {
       "supportsTablet": false,
