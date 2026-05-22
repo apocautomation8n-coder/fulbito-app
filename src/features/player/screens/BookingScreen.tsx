@@ -25,11 +25,12 @@ interface BookingScreenProps {
   onCancel: () => void;
 }
 
-// Available hour slots for selection
+// Available hour slots for selection (every 30 minutes)
 const AVAILABLE_HOURS = [
-  '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-  '14:00', '15:00', '16:00', '17:00', '18:00', '19:00',
-  '20:00', '21:00', '22:00', '23:00',
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+  '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00',
 ];
 
 export function BookingScreen({
@@ -86,27 +87,42 @@ export function BookingScreen({
     );
   };
 
-  const getLocalDeviceHour = () => {
+  const getLocalDeviceTime = () => {
     try {
-      // Get the exact local hour displayed on the device's clock
-      const localHourStr = new Date().toLocaleTimeString('en-US', {
+      // Get the exact local hour and minute displayed on the device's clock
+      const localTimeStr = new Date().toLocaleTimeString('en-US', {
         hour: '2-digit',
+        minute: '2-digit',
         hour12: false,
       });
-      const parsed = parseInt(localHourStr, 10);
-      if (!isNaN(parsed)) return parsed;
+      const [hStr, mStr] = localTimeStr.split(':');
+      const hour = parseInt(hStr, 10);
+      const minute = parseInt(mStr, 10);
+      if (!isNaN(hour) && !isNaN(minute)) {
+        return { hour, minute };
+      }
     } catch (e) {
-      // Fallback to normal getHours if locale string fails
+      // Fallback if locale string formatting throws
     }
-    return new Date().getHours();
+    const now = new Date();
+    return { hour: now.getHours(), minute: now.getMinutes() };
   };
 
   const getFilteredHours = () => {
     if (!isToday(selectedDate)) return AVAILABLE_HOURS;
-    const currentHour = getLocalDeviceHour();
+    const { hour: currentHour, minute: currentMinute } = getLocalDeviceTime();
+    
     return AVAILABLE_HOURS.filter((h) => {
-      const hourNum = parseInt(h.split(':')[0], 10);
-      return hourNum > currentHour;
+      const [hStr, mStr] = h.split(':');
+      const slotHour = parseInt(hStr, 10);
+      const slotMinute = parseInt(mStr, 10);
+      
+      // Keep if hour is strictly in the future
+      if (slotHour > currentHour) return true;
+      // If hour is same, keep if minute is strictly in the future
+      if (slotHour === currentHour && slotMinute > currentMinute) return true;
+      
+      return false;
     });
   };
 
@@ -118,11 +134,15 @@ export function BookingScreen({
     }
     if (date) {
       setSelectedDate(date);
-      // Reset selected hour if it's now in the past for the new date
+      // Reset selected hour if it's now in the past for today
       if (isToday(date) && selectedHour) {
-        const currentHour = getLocalDeviceHour();
-        const selectedH = parseInt(selectedHour.split(':')[0], 10);
-        if (selectedH <= currentHour) {
+        const { hour: currentHour, minute: currentMinute } = getLocalDeviceTime();
+        const [hStr, mStr] = selectedHour.split(':');
+        const selectedH = parseInt(hStr, 10);
+        const selectedM = parseInt(mStr, 10);
+        
+        const isPast = selectedH < currentHour || (selectedH === currentHour && selectedM <= currentMinute);
+        if (isPast) {
           setSelectedHour('');
         }
       }
@@ -252,6 +272,15 @@ export function BookingScreen({
               <Text style={styles.dateText}>{formatDateDisplay(selectedDate)}</Text>
               <ChevronDown size={16} color={colors.textTertiary} />
             </Pressable>
+
+            {/* Diagnostic/Debug row to inspect timezone matching */}
+            <View style={styles.debugRow}>
+              <View style={styles.debugBadge}>
+                <Text style={styles.debugText}>
+                  🕒 Reloj: {String(getLocalDeviceTime().hour).padStart(2, '0')}:{String(getLocalDeviceTime().minute).padStart(2, '0')} hs | ¿Es Hoy?: {isToday(selectedDate) ? 'Sí' : 'No'} | {selectedDate.getDate()}/{selectedDate.getMonth() + 1} vs {new Date().getDate()}/{new Date().getMonth() + 1}
+                </Text>
+              </View>
+            </View>
 
             {showDatePicker && (
               <View style={styles.pickerContainer}>
@@ -617,5 +646,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  debugRow: {
+    marginTop: 8,
+    alignItems: 'flex-start',
+  },
+  debugBadge: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  debugText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });
