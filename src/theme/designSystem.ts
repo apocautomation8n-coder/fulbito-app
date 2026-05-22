@@ -88,9 +88,9 @@ export const typography = {
   
   // Letter Spacing
   letterSpacing: {
-    tight: '-0.01em',
-    normal: '0',
-    wide: '0.01em',
+    tight: -0.3,
+    normal: 0,
+    wide: 0.3,
   },
 };
 
