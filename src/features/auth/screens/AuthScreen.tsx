@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Apple, LogIn, Mail, UserPlus, Trophy, Users, Shield } from 'lucide-react-native';
 
@@ -74,7 +74,7 @@ export function AuthScreen() {
               const isSelected = role === option.value;
               const iconColor = isSelected ? colors.background : colors.textSecondary;
               const iconElement = option.icon 
-                ? React.cloneElement(option.icon as React.ReactElement, { color: iconColor }) 
+                ? React.cloneElement(option.icon as React.ReactElement<{ color?: string }>, { color: iconColor }) 
                 : null;
 
               return (
