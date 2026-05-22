@@ -7,6 +7,7 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { openMatches } from '../../../data/mock';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
 import { formatCurrency } from '../../../config/businessRules';
 import type { OpenMatch } from '../../../types/domain';
@@ -14,6 +15,7 @@ import type { OpenMatch } from '../../../types/domain';
 const POSITIONS = ['Arquero', 'Defensor', 'Mediocampista', 'Delantero'];
 
 export function PlayerMatchesScreen() {
+  const { user } = useAuth();
   const [appliedMatchIds, setAppliedMatchIds] = useState<string[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<OpenMatch | null>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -27,6 +29,8 @@ export function PlayerMatchesScreen() {
 
   const handleOpenApply = (match: OpenMatch) => {
     setSelectedMatch(match);
+    // Pre-fill phone from player's profile automatically
+    setContactPhone((user as any)?.phone || '+54 351 688-9921');
     setShowApplyModal(true);
   };
 
