@@ -77,12 +77,33 @@ export function BookingScreen({
     return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  const isToday = (d: Date) => d.toDateString() === new Date().toDateString();
+  const isToday = (d: Date) => {
+    const today = new Date();
+    return (
+      d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const getLocalDeviceHour = () => {
+    try {
+      // Get the exact local hour displayed on the device's clock
+      const localHourStr = new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        hour12: false,
+      });
+      const parsed = parseInt(localHourStr, 10);
+      if (!isNaN(parsed)) return parsed;
+    } catch (e) {
+      // Fallback to normal getHours if locale string fails
+    }
+    return new Date().getHours();
+  };
 
   const getFilteredHours = () => {
     if (!isToday(selectedDate)) return AVAILABLE_HOURS;
-    const now = new Date();
-    const currentHour = now.getHours();
+    const currentHour = getLocalDeviceHour();
     return AVAILABLE_HOURS.filter((h) => {
       const hourNum = parseInt(h.split(':')[0], 10);
       return hourNum > currentHour;
@@ -98,8 +119,8 @@ export function BookingScreen({
     if (date) {
       setSelectedDate(date);
       // Reset selected hour if it's now in the past for the new date
-      if (date.toDateString() === new Date().toDateString() && selectedHour) {
-        const currentHour = new Date().getHours();
+      if (isToday(date) && selectedHour) {
+        const currentHour = getLocalDeviceHour();
         const selectedH = parseInt(selectedHour.split(':')[0], 10);
         if (selectedH <= currentHour) {
           setSelectedHour('');
