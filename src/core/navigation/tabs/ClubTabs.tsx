@@ -1,8 +1,9 @@
-import { Calendar, CreditCard, Home, MapPin } from 'lucide-react-native';
+import { Calendar, CreditCard, Home, MapPin, ShoppingCart } from 'lucide-react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { ClubAgendaScreen } from '../../../features/club/screens/ClubAgendaScreen';
 import { ClubCourtsScreen } from '../../../features/club/screens/ClubCourtsScreen';
+import { ClubKioskScreen } from '../../../features/club/screens/ClubKioskScreen';
 import { ClubPaymentsScreen } from '../../../features/club/screens/ClubPaymentsScreen';
 import { ClubProfileScreen } from '../../../features/club/screens/ClubProfileScreen';
 import { colors } from '../../../theme/theme';
@@ -10,6 +11,7 @@ import { colors } from '../../../theme/theme';
 export type ClubTabParamList = {
   Agenda: undefined;
   Courts: undefined;
+  Kiosk: undefined;
   Payments: undefined;
   Profile: undefined;
 };
@@ -46,10 +48,18 @@ export function ClubTabs() {
         }}
       />
       <Tab.Screen
+        name="Kiosk"
+        component={ClubKioskScreen}
+        options={{
+          title: 'Kiosco',
+          tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
         name="Payments"
         component={ClubPaymentsScreen}
         options={{
-          title: 'Pagos',
+          title: 'Caja',
           tabBarIcon: ({ color, size }) => <CreditCard color={color} size={size} />,
         }}
       />

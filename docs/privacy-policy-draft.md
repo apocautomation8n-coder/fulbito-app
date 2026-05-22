@@ -36,7 +36,6 @@ Fulbito puede usar:
 - Supabase para autenticacion, base de datos, almacenamiento y tiempo real.
 - MercadoPago para pagos.
 - Firebase Cloud Messaging para notificaciones push.
-- Apple y Google para inicio de sesion.
 - OpenStreetMap o proveedores de mapas para visualizacion de ubicaciones.
 
 ## Pagos

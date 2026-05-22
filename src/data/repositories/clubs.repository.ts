@@ -101,7 +101,7 @@ export class ClubsRepository {
       .insert({
         ...input,
         verification_status: 'draft',
-        city: input.city || 'Cordoba',
+        city: input.city || 'Córdoba',
         photos: input.photos || [],
         split_deadline_hours: 3,
         cancellation_policy: [
@@ -172,3 +172,4 @@ export class ClubsRepository {
 }
 
 export const clubsRepository = new ClubsRepository();
+

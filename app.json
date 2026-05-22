@@ -44,8 +44,6 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-web-browser",
-      "expo-apple-authentication",
       [
         "expo-location",
         {
@@ -56,6 +54,12 @@
         "expo-notifications",
         {
           "color": "#1F7A4D"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Fulbito usa tus fotos para cargar imagenes de las canchas."
         }
       ],
       "@react-native-community/datetimepicker"

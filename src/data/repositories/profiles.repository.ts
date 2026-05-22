@@ -1,5 +1,12 @@
 import { supabase } from '../../lib/supabase';
-import type { AppUser, ClubVerificationStatus, UserRole } from '../../types/domain';
+import type {
+  AppUser,
+  ClubVerificationStatus,
+  FootballPlayerProfile,
+  PadelPlayerProfile,
+  PlayerSportProfileMode,
+  UserRole,
+} from '../../types/domain';
 
 export type Profile = {
   id: string;
@@ -17,10 +24,20 @@ export type PlayerProfile = {
   birthdate: string | null;
   position: string | null;
   skill_level: string | null;
+  sport_profile_mode: PlayerSportProfileMode;
+  football_profile: FootballPlayerProfile;
+  padel_profile: PadelPlayerProfile;
+  transfer_alias: string | null;
   avg_rating: number;
   matches_played: number;
   created_at: string;
 };
+
+const isMissingSchemaError = (error: { code?: string; message?: string }) =>
+  error.code === 'PGRST116'
+  || error.code === 'PGRST205'
+  || error.code === '42P01'
+  || (error.message?.includes('relation') && error.message.includes('does not exist'));
 
 export type ClubProfile = {
   id: string;
@@ -51,7 +68,10 @@ export class ProfilesRepository {
       .eq('id', userId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) return null;
+      throw error;
+    }
     return data;
   }
 
@@ -64,7 +84,10 @@ export class ProfilesRepository {
       .eq('user_id', userId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) return null;
+      throw error;
+    }
     return data;
   }
 

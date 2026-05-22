@@ -13,6 +13,18 @@ import { BookingScreen } from './BookingScreen';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
 import { featuredCourts } from '../../../data/mock';
 import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
+import type { CourtSport } from '../../../types/domain';
+
+type SportFilter = 'all' | CourtSport;
+
+const sportFilters: Array<{ label: string; value: SportFilter }> = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Futbol', value: 'football' },
+  { label: 'Padel', value: 'padel' },
+];
+
+const getSportLabel = (sport: CourtSport) => (sport === 'padel' ? 'Padel' : 'Futbol');
+const getCourtFormatLabel = (sport: CourtSport, format: string) => (sport === 'padel' && format === 'other' ? '2v2' : format);
 
 export function PlayerCourtsScreen() {
   const [showBooking, setShowBooking] = useState(false);
@@ -25,20 +37,23 @@ export function PlayerCourtsScreen() {
     durationMinutes: number;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSport, setSelectedSport] = useState<SportFilter>('all');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  const neighborhoods = ['Nueva Córdoba', 'Güemes', 'Alta Córdoba', 'Centro', 'General Paz'];
+  const neighborhoods = ['Nueva Cordoba', 'Guemes', 'Alta Cordoba', 'Centro', 'General Paz'];
 
   const filteredCourts = featuredCourts.filter((court) => {
     const matchesSearch = searchQuery === '' || 
       court.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       court.clubName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      court.neighborhood.toLowerCase().includes(searchQuery.toLowerCase());
+      court.neighborhood.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getSportLabel(court.sport).toLowerCase().includes(searchQuery.toLowerCase());
     
+    const matchesSport = selectedSport === 'all' || court.sport === selectedSport;
     const matchesNeighborhood = selectedNeighborhood === '' || court.neighborhood === selectedNeighborhood;
     
-    return matchesSearch && matchesNeighborhood;
+    return matchesSearch && matchesSport && matchesNeighborhood;
   });
 
   if (showBooking && selectedCourt) {
@@ -50,7 +65,7 @@ export function PlayerCourtsScreen() {
         format={selectedCourt.format}
         pricePerSlot={selectedCourt.pricePerSlot}
         durationMinutes={selectedCourt.durationMinutes}
-        paymentMode="full"
+        paymentMode="at_club"
         onComplete={() => {
           setShowBooking(false);
           setSelectedCourt(null);
@@ -69,7 +84,19 @@ export function PlayerCourtsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Reservar Canchas</Text>
-          <Text style={styles.subtitle}>Encuentra y reserva los mejores turnos de fútbol en {businessRules.launchCity}</Text>
+          <Text style={styles.subtitle}>Encuentra turnos de futbol y padel en {businessRules.launchCity}</Text>
+          <View style={styles.sportQuickFilters}>
+            {sportFilters.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                selected={selectedSport === option.value}
+                onSelect={() => setSelectedSport(option.value)}
+                variant={selectedSport === option.value ? 'primary' : 'outline'}
+                size="sm"
+              />
+            ))}
+          </View>
         </View>
 
         {/* Search and Filters Toggle */}
@@ -96,6 +123,20 @@ export function PlayerCourtsScreen() {
         {/* Dynamic Filters Panel */}
         {showFilters && (
           <Card variant="glass" size="md" style={styles.filtersCard}>
+            <Text style={styles.filterTitle}>Filtrar por Deporte</Text>
+            <View style={styles.neighborhoodsContainer}>
+              {sportFilters.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  selected={selectedSport === option.value}
+                  onSelect={() => setSelectedSport(option.value)}
+                  variant={selectedSport === option.value ? 'primary' : 'outline'}
+                  size="sm"
+                />
+              ))}
+            </View>
+
             <Text style={styles.filterTitle}>Filtrar por Barrio</Text>
             <View style={styles.neighborhoodsContainer}>
               <Chip
@@ -124,7 +165,7 @@ export function PlayerCourtsScreen() {
           <EmptyState
             icon={<Search size={48} color={colors.textTertiary} />}
             title="No se encontraron canchas"
-            description="Intenta cambiar los términos de búsqueda o los filtros de barrio."
+            description="Intenta cambiar los terminos de busqueda o los filtros de barrio."
           />
         ) : (
           <View style={styles.courtsList}>
@@ -133,12 +174,12 @@ export function PlayerCourtsScreen() {
                 {/* Visual Header with Emoji and Club Rating */}
                 <View style={styles.cardHeader}>
                   <View style={styles.courtBadge}>
-                    <Text style={styles.courtEmoji}>{court.emoji || '⚽'}</Text>
+                    <Text style={styles.courtEmoji}>{court.emoji || 'F5'}</Text>
                   </View>
                   <View style={styles.titleBlock}>
                     <Text style={styles.clubName}>{court.clubName}</Text>
                     <Text style={styles.courtName}>
-                      {court.name} · {court.format}
+                      {court.name} - {getCourtFormatLabel(court.sport, court.format)}
                     </Text>
                   </View>
                   <View style={styles.ratingBadge}>
@@ -152,6 +193,7 @@ export function PlayerCourtsScreen() {
                   {court.surfaceType && (
                     <Badge label={court.surfaceType} variant="default" size="sm" />
                   )}
+                  <Badge label={getSportLabel(court.sport)} variant="accent" size="sm" />
                   <Badge label={`${court.durationMinutes} min`} variant="default" size="sm" />
                   <Badge label="Verificado" variant="glow" size="sm" />
                 </View>
@@ -160,7 +202,7 @@ export function PlayerCourtsScreen() {
                 <View style={styles.metaRow}>
                   <View style={styles.metaItem}>
                     <MapPin size={16} color={colors.textTertiary} />
-                    <Text style={styles.metaText}>{court.neighborhood} · {court.distanceKm} km</Text>
+                    <Text style={styles.metaText}>{court.neighborhood} - {court.distanceKm} km</Text>
                   </View>
                 </View>
 
@@ -169,7 +211,7 @@ export function PlayerCourtsScreen() {
                 {/* Footer block with Next Slot and Price & Action */}
                 <View style={styles.cardFooter}>
                   <View style={styles.slotBlock}>
-                    <Text style={styles.nextSlotLabel}>Próximo turno</Text>
+                    <Text style={styles.nextSlotLabel}>Proximo turno</Text>
                     <View style={styles.slotDetail}>
                       <Clock size={14} color={colors.primary} />
                       <Text style={styles.slotTime}>{court.nextSlotLabel}</Text>
@@ -185,7 +227,7 @@ export function PlayerCourtsScreen() {
                           id: court.id,
                           name: court.name,
                           clubName: court.clubName,
-                          format: court.format,
+                          format: getCourtFormatLabel(court.sport, court.format),
                           pricePerSlot: court.pricePerSlot,
                           durationMinutes: court.durationMinutes,
                         });
@@ -234,6 +276,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
   },
+  sportQuickFilters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
   searchRow: {
     flexDirection: 'row',
     gap: 10,
@@ -267,6 +315,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
     marginBottom: 10,
+    marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },

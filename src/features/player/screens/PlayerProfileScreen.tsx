@@ -1,31 +1,161 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, ScrollView, View, Text, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, ScrollView, View, Text, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, ChevronRight, Flag, LogOut, Star, Trophy, Trash2, User, Zap, Mail, Phone, Info, Shield, Heart, MapPin } from 'lucide-react-native';
+import { Calendar, ChevronRight, Flag, LogOut, Star, Trophy, Trash2, User, Zap, Mail, Phone, Info, Shield, Heart, MapPin, Wallet } from 'lucide-react-native';
 
 import { useAuth } from '../../../core/providers/AuthProvider';
+import { profilesRepository } from '../../../data/repositories/profiles.repository';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { businessRules } from '../../../config/businessRules';
 import { company } from '../../../config/company';
 import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
+import type { CourtSport, PlayerSportProfileMode } from '../../../types/domain';
+
+const sportModeOptions: Array<{ label: string; value: PlayerSportProfileMode }> = [
+  { label: 'Futbol', value: 'football' },
+  { label: 'Padel', value: 'padel' },
+  { label: 'Ambos', value: 'both' },
+];
+
+const footballPositions = ['Arquero', 'Defensor', 'Mediocampista', 'Delantero'];
+const footballFootOptions = ['Derecho', 'Zurdo', 'Ambos'];
+const padelSideOptions = ['Drive', 'Reves', 'Indistinto'];
+const padelStyleOptions = ['Ofensivo', 'Defensivo', 'Mixto'];
+
+const hasSport = (mode: PlayerSportProfileMode, sport: CourtSport) =>
+  mode === 'both' || mode === sport;
 
 export function PlayerProfileScreen() {
-  const { signOut, user } = useAuth();
-  
-  // High quality test data to make the profile look highly professional and filled
+  const { isConfigured, signOut, user } = useAuth();
+  const [transferAlias, setTransferAlias] = useState('');
+  const [isProfileLoading, setIsProfileLoading] = useState(isConfigured);
+  const hasHydratedProfile = useRef(false);
+  const [sportMode, setSportMode] = useState<PlayerSportProfileMode>('both');
+  const [footballPosition, setFootballPosition] = useState('Delantero');
+  const [footballFoot, setFootballFoot] = useState('Derecho');
+  const [footballNumber, setFootballNumber] = useState('10');
+  const [padelSide, setPadelSide] = useState('Reves');
+  const [padelStyle, setPadelStyle] = useState('Mixto');
+  const [padelLevel, setPadelLevel] = useState('Intermedio alto');
+
+  const persistPlayerProfile = useCallback(async () => {
+    if (!isConfigured || !user?.id || user.id.startsWith('demo-')) {
+      return;
+    }
+
+    try {
+      await profilesRepository.updatePlayerProfile(user.id, {
+        sport_profile_mode: sportMode,
+        transfer_alias: transferAlias.trim() || null,
+        football_profile: {
+          position: footballPosition,
+          preferredFoot: footballFoot,
+          jerseyNumber: footballNumber,
+        },
+        padel_profile: {
+          preferredSide: padelSide,
+          style: padelStyle,
+          level: padelLevel,
+        },
+      });
+    } catch {
+      Alert.alert('Error', 'No pudimos guardar tu perfil deportivo.');
+    }
+  }, [
+    footballFoot,
+    footballNumber,
+    footballPosition,
+    isConfigured,
+    padelLevel,
+    padelSide,
+    padelStyle,
+    sportMode,
+    transferAlias,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      if (!isConfigured || !user?.id || user.id.startsWith('demo-')) {
+        if (active) {
+          setTransferAlias('jugador.demo');
+          setIsProfileLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const playerProfile = await profilesRepository.getPlayerProfile(user.id);
+        if (!active || !playerProfile) {
+          return;
+        }
+
+        setSportMode(playerProfile.sport_profile_mode);
+        setTransferAlias(playerProfile.transfer_alias ?? '');
+        setFootballPosition(playerProfile.football_profile?.position ?? 'Delantero');
+        setFootballFoot(playerProfile.football_profile?.preferredFoot ?? 'Derecho');
+        setFootballNumber(playerProfile.football_profile?.jerseyNumber ?? '10');
+        setPadelSide(playerProfile.padel_profile?.preferredSide ?? 'Reves');
+        setPadelStyle(playerProfile.padel_profile?.style ?? 'Mixto');
+        setPadelLevel(playerProfile.padel_profile?.level ?? 'Intermedio alto');
+      } catch {
+        if (active) {
+          Alert.alert('Perfil', 'No pudimos cargar tu perfil. Seguis en modo local.');
+        }
+      } finally {
+        if (active) {
+          setIsProfileLoading(false);
+          hasHydratedProfile.current = true;
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      active = false;
+      hasHydratedProfile.current = false;
+    };
+  }, [isConfigured, user?.id]);
+
+  useEffect(() => {
+    if (!hasHydratedProfile.current || isProfileLoading) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      void persistPlayerProfile();
+    }, 700);
+
+    return () => clearTimeout(timeout);
+  }, [
+    footballFoot,
+    footballNumber,
+    footballPosition,
+    isProfileLoading,
+    padelLevel,
+    padelSide,
+    padelStyle,
+    persistPlayerProfile,
+    sportMode,
+  ]);
+
   const playerStats = {
     fullName: user?.fullName || 'Ezequiel Cocco',
     email: user?.email || 'ezequiel@apocautomation.com',
     phone: '+54 351 688-9921',
+    transferAlias,
     birthdate: '24 / 08 / 1996',
     level: 12,
     levelName: 'Oro Pro',
-    position: 'Delantero / Mediapunta',
-    favFoot: 'Derecho (Diestro)',
-    jerseyNumber: '10',
-    preferredZone: 'Nueva Córdoba, CBA',
+    position: sportMode === 'both' ? `${footballPosition} / ${padelSide}` : sportMode === 'padel' ? padelSide : footballPosition,
+    favFoot: footballFoot,
+    jerseyNumber: footballNumber,
+    preferredZone: 'Nueva Cordoba, CBA',
     rating: 4.9,
     matchesCount: 38,
     streak: 8,
@@ -37,7 +167,7 @@ export function PlayerProfileScreen() {
   const handleDeleteAccount = async () => {
     Alert.alert(
       'Eliminar cuenta permanentemente',
-      '¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es irreversible. Perderás tus estadísticas, reservas y racha.',
+      'Estas seguro de que quieres eliminar tu cuenta? Esta accion es irreversible. Perderas tus estadisticas, reservas y racha.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -54,13 +184,13 @@ export function PlayerProfileScreen() {
 
   const handleReportProblem = () => {
     Alert.alert(
-      'Soporte Técnico',
-      '¿Con qué necesitas ayuda?',
+      'Soporte Tecnico',
+      'Con que necesitas ayuda?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Error en la App', onPress: () => Alert.alert('Reporte enviado', 'Gracias por avisarnos. Lo revisaremos.') },
-        { text: 'Problema de Pago', onPress: () => Alert.alert('Soporte de Pago', 'Envíanos un mail a soporte@fulbito.app con el comprobante de Mercado Pago.') },
-        { text: 'Otro', onPress: () => Alert.alert('Soporte', 'En breve un agente se contactará contigo.') },
+        { text: 'Problema de Pago', onPress: () => Alert.alert('Soporte de Pago', 'Envianos un mail a soporte@fulbito.app con el comprobante de Mercado Pago.') },
+        { text: 'Otro', onPress: () => Alert.alert('Soporte', 'En breve un agente se contactara contigo.') },
       ],
     );
   };
@@ -137,7 +267,7 @@ export function PlayerProfileScreen() {
           <Card variant="glass" size="md" style={styles.statBox}>
             <Star size={24} color="#F59E0B" fill="#F59E0B" />
             <Text style={styles.statVal}>{playerStats.rating.toFixed(1)}</Text>
-            <Text style={styles.statLabel}>Valoración</Text>
+            <Text style={styles.statLabel}>Valoracion</Text>
           </Card>
           
           <Card variant="glass" size="md" style={styles.statBox}>
@@ -161,27 +291,137 @@ export function PlayerProfileScreen() {
 
         {/* Player Technical details */}
         <Card variant="elevated" size="lg" style={styles.detailsCard}>
-          <Text style={styles.sectionTitle}>Datos Físicos y Técnicos</Text>
-          
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Pie hábil</Text>
-            <Badge label={playerStats.favFoot} variant="glow" />
+          <Text style={styles.sectionTitle}>Perfil deportivo</Text>
+
+          <View style={styles.sportModeGrid}>
+            {sportModeOptions.map((option) => {
+              const selected = sportMode === option.value;
+
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setSportMode(option.value)}
+                  style={[styles.sportModeChip, selected && styles.sportModeChipSelected]}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.sportModeText, selected && styles.sportModeTextSelected]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
+          {hasSport(sportMode, 'football') && (
+            <View style={styles.sportProfileBlock}>
+              <View style={styles.sportProfileHeader}>
+                <Text style={styles.sportProfileTitle}>Futbol</Text>
+                <Badge label="Ranking global" variant="accent" size="sm" />
+              </View>
+
+              <Text style={styles.fieldLabel}>Posicion principal</Text>
+              <View style={styles.optionGrid}>
+                {footballPositions.map((position) => {
+                  const selected = footballPosition === position;
+                  return (
+                    <Pressable
+                      key={position}
+                      onPress={() => setFootballPosition(position)}
+                      style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    >
+                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{position}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Pie habil</Text>
+              <View style={styles.optionGrid}>
+                {footballFootOptions.map((foot) => {
+                  const selected = footballFoot === foot;
+                  return (
+                    <Pressable
+                      key={foot}
+                      onPress={() => setFootballFoot(foot)}
+                      style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    >
+                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{foot}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Numero de camiseta</Text>
+              <TextInput
+                keyboardType="number-pad"
+                onChangeText={setFootballNumber}
+                placeholder="10"
+                placeholderTextColor={colors.textTertiary}
+                style={styles.profileInput}
+                value={footballNumber}
+              />
+            </View>
+          )}
+
+          {hasSport(sportMode, 'padel') && (
+            <View style={styles.sportProfileBlock}>
+              <View style={styles.sportProfileHeader}>
+                <Text style={styles.sportProfileTitle}>Padel</Text>
+                <Badge label="Ranking global" variant="accent" size="sm" />
+              </View>
+
+              <Text style={styles.fieldLabel}>Lado preferido</Text>
+              <View style={styles.optionGrid}>
+                {padelSideOptions.map((side) => {
+                  const selected = padelSide === side;
+                  return (
+                    <Pressable
+                      key={side}
+                      onPress={() => setPadelSide(side)}
+                      style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    >
+                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{side}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Estilo de juego</Text>
+              <View style={styles.optionGrid}>
+                {padelStyleOptions.map((style) => {
+                  const selected = padelStyle === style;
+                  return (
+                    <Pressable
+                      key={style}
+                      onPress={() => setPadelStyle(style)}
+                      style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    >
+                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{style}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Nivel padel</Text>
+              <TextInput
+                onChangeText={setPadelLevel}
+                placeholder="Ej: Intermedio"
+                placeholderTextColor={colors.textTertiary}
+                style={styles.profileInput}
+                value={padelLevel}
+              />
+            </View>
+          )}
+
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Zona de Reserva Habitual</Text>
+            <Text style={styles.detailLabel}>Zona de reserva habitual</Text>
             <Text style={styles.detailValue}>{playerStats.preferredZone}</Text>
-          </View>
-
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Contacto de Emergencia</Text>
-            <Text style={styles.detailValue}>Habilitado (Soporte)</Text>
           </View>
         </Card>
 
         {/* Account settings */}
         <Card variant="elevated" size="lg" style={styles.detailsCard}>
-          <Text style={styles.sectionTitle}>Información de Cuenta</Text>
+          <Text style={styles.sectionTitle}>Informacion de Cuenta</Text>
           
           <View style={styles.accountItem}>
             <View style={styles.itemLeft}>
@@ -189,7 +429,7 @@ export function PlayerProfileScreen() {
                 <Mail size={16} color={colors.textSecondary} />
               </View>
               <View>
-                <Text style={styles.itemLabel}>Correo electrónico</Text>
+                <Text style={styles.itemLabel}>Correo electronico</Text>
                 <Text style={styles.itemValue}>{playerStats.email}</Text>
               </View>
             </View>
@@ -201,7 +441,7 @@ export function PlayerProfileScreen() {
                 <Phone size={16} color={colors.textSecondary} />
               </View>
               <View>
-                <Text style={styles.itemLabel}>Número celular</Text>
+                <Text style={styles.itemLabel}>Numero celular</Text>
                 <Text style={styles.itemValue}>{playerStats.phone}</Text>
               </View>
             </View>
@@ -220,6 +460,29 @@ export function PlayerProfileScreen() {
           </View>
         </Card>
 
+        <Card variant="elevated" size="lg" style={styles.prizePaymentCard}>
+          <View style={styles.prizePaymentHeader}>
+            <View style={styles.prizePaymentIcon}>
+              <Wallet size={18} color={colors.primary} />
+            </View>
+            <View style={styles.prizePaymentText}>
+              <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Cobro de premios</Text>
+              <Text style={styles.aliasHint}>Alias para transferir si quedas en el top 3 cuando los premios esten activos.</Text>
+            </View>
+          </View>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isProfileLoading}
+            onBlur={persistPlayerProfile}
+            onChangeText={setTransferAlias}
+            placeholder="tu.alias.mp"
+            placeholderTextColor={colors.textTertiary}
+            style={styles.aliasInput}
+            value={transferAlias}
+          />
+        </Card>
+
         {/* Actions list */}
         <Card variant="elevated" size="lg" style={styles.detailsCard}>
           <Text style={styles.sectionTitle}>Ajustes y Ayuda</Text>
@@ -229,7 +492,7 @@ export function PlayerProfileScreen() {
               <View style={styles.iconBox}>
                 <Flag size={16} color={colors.textSecondary} />
               </View>
-              <Text style={styles.actionText}>Reportar problema técnico</Text>
+              <Text style={styles.actionText}>Reportar problema tecnico</Text>
             </View>
             <ChevronRight size={18} color={colors.textTertiary} />
           </Pressable>
@@ -257,7 +520,7 @@ export function PlayerProfileScreen() {
         {/* Log out CTA */}
         <Button
           icon={<LogOut size={18} color="#FFFFFF" />}
-          label="Cerrar sesión"
+          label="Cerrar sesion"
           onPress={signOut}
           variant="glow"
           size="lg"
@@ -496,6 +759,102 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  sectionTitleCompact: {
+    marginBottom: 4,
+  },
+  sportModeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  sportModeChip: {
+    alignItems: 'center',
+    backgroundColor: colors.cardLight,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexGrow: 1,
+    minHeight: 42,
+    minWidth: 88,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  sportModeChipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
+  },
+  sportModeText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sportModeTextSelected: {
+    color: '#FFFFFF',
+  },
+  sportProfileBlock: {
+    backgroundColor: colors.cardLight,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+    marginBottom: 12,
+    padding: 12,
+  },
+  sportProfileHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  sportProfileTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  fieldLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  optionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionChip: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  optionChipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
+  },
+  optionText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  optionTextSelected: {
+    color: '#FFFFFF',
+  },
+  profileInput: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+    minHeight: 42,
+    paddingHorizontal: 12,
+  },
   detailItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -521,6 +880,39 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  aliasItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  prizePaymentCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.md,
+  },
+  prizePaymentHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  prizePaymentIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    borderRadius: 10,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  prizePaymentText: {
+    flex: 1,
   },
   actionItem: {
     flexDirection: 'row',
@@ -556,6 +948,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginTop: 2,
+  },
+  aliasContent: {
+    flex: 1,
+  },
+  aliasInput: {
+    backgroundColor: colors.cardLight,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 6,
+    minHeight: 42,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  aliasHint: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
+    marginTop: 6,
   },
   actionText: {
     fontSize: 13,

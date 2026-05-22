@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { ArrowLeft, Calendar, Clock, CreditCard, MapPin, Users, ChevronDown, Info } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Clock, CreditCard, ChevronDown, Info } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { CreateMatchScreen } from './CreateMatchScreen';
-import { businessRules, formatCurrency } from '../../../config/businessRules';
+import { businessRules, calculateBookingAmounts, formatCurrency } from '../../../config/businessRules';
 import { colors, spacing, shadows } from '../../../theme/designSystem';
 import type { PaymentCollectionMode } from '../../../types/domain';
 
@@ -40,7 +40,6 @@ export function BookingScreen({
   format,
   pricePerSlot,
   durationMinutes,
-  paymentMode,
   onComplete,
   onCancel,
 }: BookingScreenProps) {
@@ -52,16 +51,7 @@ export function BookingScreen({
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
 
   const calculateAmounts = () => {
-    const appCommission = pricePerSlot * businessRules.platformCommissionRate;
-    const clubAmount = pricePerSlot - appCommission;
-    const amountDueNow = paymentMode === 'full' ? pricePerSlot : pricePerSlot * 0.5;
-
-    return {
-      totalAmount: pricePerSlot,
-      appCommission,
-      clubAmount,
-      amountDueNow,
-    };
+    return calculateBookingAmounts(pricePerSlot);
   };
 
   const formatDateDisplay = (d: Date) => {
@@ -73,7 +63,7 @@ export function BookingScreen({
       return 'Hoy, ' + d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
     }
     if (d.toDateString() === tomorrow.toDateString()) {
-      return 'Mañana, ' + d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+      return 'Dia siguiente, ' + d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
     }
     return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
   };
@@ -189,7 +179,7 @@ export function BookingScreen({
         amount_due_now: amounts.amountDueNow,
         app_commission: amounts.appCommission,
         club_amount: amounts.clubAmount,
-        payment_mode: paymentMode,
+        payment_mode: 'at_club',
         player_id: 'demo-player',
       });
 
@@ -198,8 +188,8 @@ export function BookingScreen({
     } catch (error) {
       // In demo mode, simulate a successful booking
       Alert.alert(
-        '¡Reserva Confirmada! 🎉',
-        `Tu turno en ${courtName} el ${formatDateDisplay(selectedDate)} a las ${selectedHour} hs ha sido reservado exitosamente.\n\nMonto: ${formatCurrency(calculateAmounts().amountDueNow)}`,
+        'Reserva confirmada',
+        `Tu turno en ${courtName} el ${formatDateDisplay(selectedDate)} a las ${selectedHour} hs ha sido reservado exitosamente.\n\nPagas ahora: ${formatCurrency(calculateAmounts().amountDueNow)}\nEn el club: ${formatCurrency(calculateAmounts().amountToPayAtClub)}`,
         [{ text: 'Genial', onPress: onComplete }],
       );
     } finally {
@@ -249,7 +239,7 @@ export function BookingScreen({
           <Card variant="elevated" size="lg" style={styles.courtCard}>
             <View style={styles.courtRow}>
               <View style={styles.courtIcon}>
-                <Text style={styles.courtEmoji}>⚽</Text>
+                <Text style={styles.courtEmoji}>F5</Text>
               </View>
               <View style={styles.courtMeta}>
                 <Text style={styles.courtName}>{courtName}</Text>
@@ -265,7 +255,7 @@ export function BookingScreen({
 
           {/* Date Selection */}
           <Card variant="elevated" size="lg" style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>📅 Fecha del Turno</Text>
+            <Text style={styles.sectionTitle}>Fecha del turno</Text>
 
             <Pressable style={styles.dateSelector} onPress={() => setShowDatePicker(true)}>
               <Calendar size={18} color={colors.primary} />
@@ -300,14 +290,14 @@ export function BookingScreen({
 
           {/* Hour Selection Grid */}
           <Card variant="elevated" size="lg" style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>⏰ Horario de Inicio</Text>
+            <Text style={styles.sectionTitle}>Horario de inicio</Text>
             <Text style={styles.sectionSubtitle}>
-              Selecciona la hora de inicio. La duración del turno es de {durationMinutes} minutos.
+              Selecciona la hora de inicio. La duracion del turno es de {durationMinutes} minutos.
             </Text>
 
             {filteredHours.length === 0 ? (
               <View style={styles.noHoursBox}>
-                <Text style={styles.noHoursText}>No quedan horarios disponibles para hoy. Probá seleccionar otro día.</Text>
+                <Text style={styles.noHoursText}>No quedan horarios disponibles para hoy. Proba seleccionar otro dia.</Text>
               </View>
             ) : (
               <View style={styles.hoursGrid}>
@@ -340,7 +330,7 @@ export function BookingScreen({
 
           {/* Payment Summary */}
           <Card variant="elevated" size="lg" style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>💳 Resumen de Pago</Text>
+            <Text style={styles.sectionTitle}>Resumen de reserva</Text>
 
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Precio del turno</Text>
@@ -348,33 +338,39 @@ export function BookingScreen({
             </View>
 
             <View style={styles.priceRow}>
-              <Text style={styles.priceCaption}>Comisión Fulbito (5%)</Text>
+              <Text style={styles.priceCaption}>Comision Fulbito total</Text>
               <Text style={styles.priceCaption}>{formatCurrency(amounts.appCommission)}</Text>
             </View>
 
+            <View style={styles.priceRow}>
+              <Text style={styles.priceCaption}>Parte del club para cierre mensual</Text>
+              <Text style={styles.priceCaption}>{formatCurrency(amounts.clubMonthlyCommission)}</Text>
+            </View>
             <View style={styles.divider} />
 
             <View style={styles.priceRow}>
               <Text style={styles.priceHighlight}>
-                {paymentMode === 'full' ? 'Total a pagar' : 'Seña (50%)'}
+                Pagas ahora para reservar
               </Text>
               <Text style={styles.priceTotal}>{formatCurrency(amounts.amountDueNow)}</Text>
             </View>
 
-            {paymentMode === 'deposit' && (
-              <View style={styles.priceRow}>
-                <Text style={styles.priceCaption}>Resto a pagar en el lugar</Text>
-                <Text style={styles.priceCaption}>
-                  {formatCurrency(amounts.totalAmount - amounts.amountDueNow)}
-                </Text>
-              </View>
-            )}
+            <View style={styles.priceRow}>
+              <Text style={styles.priceCaption}>Pagas en el club</Text>
+              <Text style={styles.priceCaption}>
+                {formatCurrency(amounts.amountToPayAtClub)}
+              </Text>
+            </View>
+
+            <Text style={styles.paymentNote}>
+              El turno se paga en el club en efectivo, transferencia o el medio que acepte el club.
+            </Text>
           </Card>
 
           {/* CTA Button */}
           <Button
             disabled={isSubmitting || !selectedHour}
-            label={isSubmitting ? 'Procesando...' : 'Confirmar y Pagar'}
+            label={isSubmitting ? 'Procesando...' : 'Pagar reserva'}
             onPress={handleBooking}
             variant="glow"
             size="lg"
@@ -389,7 +385,7 @@ export function BookingScreen({
             <View style={styles.infoRow}>
               <Info size={14} color={colors.textTertiary} />
               <Text style={styles.infoText}>
-                Tienes {businessRules.paymentHoldMinutes} minutos para completar el pago. La reserva se cancela automáticamente si no se abona.
+                Tienes {businessRules.paymentHoldMinutes} minutos para completar el pago de reserva. El turno queda bloqueado cuando se confirma.
               </Text>
             </View>
           </View>
@@ -597,6 +593,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: colors.primary,
+  },
+  paymentNote: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 18,
+    marginTop: 4,
   },
   divider: {
     height: 1,

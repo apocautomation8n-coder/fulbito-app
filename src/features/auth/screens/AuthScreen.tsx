@@ -9,16 +9,15 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Apple, LogIn, Mail, UserPlus, Trophy, Users, Shield } from 'lucide-react-native';
+import { LogIn, UserPlus, Trophy, Users, Shield } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { Chip } from '../../../components/ui/Chip';
 import { SignUpScreen } from './SignUpScreen';
 import { businessRules } from '../../../config/businessRules';
 import { company } from '../../../config/company';
-import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
+import { colors, shadows } from '../../../theme/designSystem';
 import type { UserRole } from '../../../types/domain';
 import { useAuth } from '../../../core/providers/AuthProvider';
 
@@ -29,7 +28,7 @@ const roleOptions: Array<{ label: string; value: UserRole; icon: React.ReactNode
 ];
 
 export function AuthScreen() {
-  const { isConfigured, signInDemo, signInWithOAuth, signInWithPassword } = useAuth();
+  const { isConfigured, signInDemo, signInWithPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('player');
@@ -42,17 +41,6 @@ export function AuthScreen() {
       await signInWithPassword(email, password, role);
     } catch (error) {
       Alert.alert('No pudimos entrar', error instanceof Error ? error.message : 'Revisa tus datos.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleOAuth = async (provider: 'google' | 'apple') => {
-    setIsSubmitting(true);
-    try {
-      await signInWithOAuth(provider);
-    } catch (error) {
-      Alert.alert('Login no disponible', error instanceof Error ? error.message : 'Configura Supabase OAuth.');
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +62,7 @@ export function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          {/* ── Hero Section ── */}
+          {/* â”€â”€ Hero Section â”€â”€ */}
           <View style={styles.hero}>
             <View style={styles.logoContainer}>
               <Text style={styles.logoEmoji}>⚽</Text>
@@ -84,7 +72,7 @@ export function AuthScreen() {
             <View style={styles.accentLine} />
           </View>
 
-          {/* ── Form Card ── */}
+          {/* â”€â”€ Form Card â”€â”€ */}
           <View style={styles.formCard}>
             {/* Role Selector */}
             <Text style={styles.sectionLabel}>Ingresar como</Text>
@@ -147,46 +135,16 @@ export function AuthScreen() {
               loading={isSubmitting}
             />
 
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o continuar con</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* OAuth Buttons */}
-            <View style={styles.oauthRow}>
-              <Button
-                disabled={isSubmitting}
-                icon={<Mail size={18} color={colors.textPrimary} />}
-                label="Google"
-                onPress={() => handleOAuth('google')}
-                style={styles.oauthButton}
-                variant="secondary"
-                size="md"
-              />
-              <Button
-                disabled={isSubmitting}
-                icon={<Apple size={18} color={colors.textPrimary} />}
-                label="Apple"
-                onPress={() => handleOAuth('apple')}
-                style={styles.oauthButton}
-                variant="secondary"
-                size="md"
-              />
-            </View>
-
-            {/* Sign Up / Demo */}
-            {isConfigured && (
-              <Button
-                icon={<UserPlus size={18} color={colors.primary} />}
-                label="Crear cuenta"
-                onPress={() => setShowSignUp(true)}
-                variant="ghost"
-                size="md"
-                fullWidth
-              />
-            )}
+            <Button
+              disabled={isSubmitting}
+              icon={<UserPlus size={18} color={colors.primary} />}
+              label="Crear cuenta"
+              onPress={() => setShowSignUp(true)}
+              style={styles.signUpButton}
+              variant="secondary"
+              size="md"
+              fullWidth
+            />
 
             {!isConfigured && (
               <View style={styles.demoSection}>
@@ -200,7 +158,7 @@ export function AuthScreen() {
             )}
           </View>
 
-          {/* ── Footer ── */}
+          {/* â”€â”€ Footer â”€â”€ */}
           <Text style={styles.footer}>
             18+ · Pago online · Clubes verificados{'\n'}{company.legalName}
           </Text>
@@ -225,7 +183,7 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
 
-  // ── Hero ──
+  // â”€â”€ Hero â”€â”€
   hero: {
     alignItems: 'center',
     marginBottom: 32,
@@ -264,7 +222,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 
-  // ── Form ──
+  // â”€â”€ Form â”€â”€
   formCard: {
     backgroundColor: colors.card,
     borderRadius: 16,
@@ -291,35 +249,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // ── Divider ──
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textTertiary,
-    paddingHorizontal: 12,
+  signUpButton: {
+    marginTop: 12,
   },
 
-  // ── OAuth ──
-  oauthRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  oauthButton: {
-    flex: 1,
-  },
-
-  // ── Demo ──
+  // â”€â”€ Demo â”€â”€
   demoSection: {
     alignItems: 'center',
     marginTop: 8,
@@ -339,7 +273,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  // ── Footer ──
+  // â”€â”€ Footer â”€â”€
   footer: {
     fontSize: 11,
     fontWeight: '400',
@@ -348,3 +282,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+

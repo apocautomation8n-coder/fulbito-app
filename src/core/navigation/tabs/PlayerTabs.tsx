@@ -1,15 +1,17 @@
-import { Calendar, MapPin, User, Users } from 'lucide-react-native';
+import { Calendar, MapPin, Trophy, User, Users } from 'lucide-react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { PlayerBookingsScreen } from '../../../features/player/screens/PlayerBookingsScreen';
 import { PlayerCourtsScreen } from '../../../features/player/screens/PlayerCourtsScreen';
 import { PlayerMatchesScreen } from '../../../features/player/screens/PlayerMatchesScreen';
 import { PlayerProfileScreen } from '../../../features/player/screens/PlayerProfileScreen';
+import { PlayerRankingScreen } from '../../../features/player/screens/PlayerRankingScreen';
 import { colors } from '../../../theme/theme';
 
 export type PlayerTabParamList = {
   Courts: undefined;
   Matches: undefined;
+  Ranking: undefined;
   Bookings: undefined;
   Profile: undefined;
 };
@@ -43,6 +45,14 @@ export function PlayerTabs() {
         options={{
           title: 'Partidos',
           tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="Ranking"
+        component={PlayerRankingScreen}
+        options={{
+          title: 'Ranking',
+          tabBarIcon: ({ color, size }) => <Trophy color={color} size={size} />,
         }}
       />
       <Tab.Screen

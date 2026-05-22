@@ -28,7 +28,7 @@ export function ClubRegistrationScreen({ ownerId, onComplete, onCancel }: ClubRe
     }
 
     if (!neighborhood.trim()) {
-      Alert.alert('Barrio requerido', 'Por favor ingresa el barrio donde está el club.');
+      Alert.alert('Barrio requerido', 'Por favor ingresa el barrio donde esta el club.');
       return;
     }
 
@@ -87,7 +87,7 @@ export function ClubRegistrationScreen({ ownerId, onComplete, onCancel }: ClubRe
             <TextInput
               autoCapitalize="words"
               onChangeText={setAddress}
-              placeholder="Calle y número"
+              placeholder="Calle y numero"
               placeholderTextColor={colors.muted}
               style={styles.input}
               value={address}
@@ -101,7 +101,7 @@ export function ClubRegistrationScreen({ ownerId, onComplete, onCancel }: ClubRe
               <TextInput
                 autoCapitalize="words"
                 onChangeText={setNeighborhood}
-                placeholder="Ej: Nueva Cordoba"
+                placeholder="Ej: Nueva Córdoba"
                 placeholderTextColor={colors.muted}
                 style={styles.input}
                 value={neighborhood}
@@ -128,8 +128,8 @@ export function ClubRegistrationScreen({ ownerId, onComplete, onCancel }: ClubRe
           />
 
           <Text style={styles.info}>
-            Después de crear el club, podrás cargar tus canchas. El club quedará en estado borrador hasta
-            que solicites aprobación y conectes MercadoPago.
+            Después de crear el club, podrás cargar tus canchas. El club quedar? en estado borrador hasta
+            que solicites aprobacion.
           </Text>
         </Card>
       </ScrollView>

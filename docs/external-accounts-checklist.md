@@ -22,8 +22,6 @@ Crear proyecto:
 - Region sugerida: cercana a Argentina/Brasil.
 - Auth providers:
   - Email/password.
-  - Google.
-  - Apple.
 
 Luego completar `.env.local`:
 
@@ -87,7 +85,6 @@ Crear o usar cuenta Apple Developer de Apoc Automation.
 Configurar:
 
 - Bundle ID: `com.apoc.fulbito`.
-- Sign in with Apple.
 - Push notifications.
 - Privacy policy URL.
 - Support URL: https://apoc.apocautomation.site.

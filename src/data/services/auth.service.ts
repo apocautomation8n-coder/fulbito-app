@@ -1,5 +1,4 @@
 import { supabase } from '../../lib/supabase';
-import { profilesRepository } from '../repositories/profiles.repository';
 import type { UserRole } from '../../types/domain';
 
 export type SignUpInput = {
@@ -15,6 +14,19 @@ export type AuthError = {
   code?: string;
 };
 
+const normalizeBirthdate = (birthdate?: string) => {
+  const value = birthdate?.trim();
+  if (!value) return undefined;
+
+  const ddmmyyyy = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy;
+    return `${year}-${month}-${day}`;
+  }
+
+  return value;
+};
+
 export class AuthService {
   async signUp(input: SignUpInput): Promise<{ userId: string; email: string }> {
     if (!supabase) {
@@ -28,6 +40,7 @@ export class AuthService {
         data: {
           full_name: input.fullName,
           role: input.role,
+          birthdate: normalizeBirthdate(input.birthdate),
         },
       },
     });
@@ -38,19 +51,6 @@ export class AuthService {
 
     if (!data.user) {
       throw new Error('No user returned from signup');
-    }
-
-    // Create profile in public.profiles table
-    await profilesRepository.createProfile(
-      data.user.id,
-      input.email,
-      input.fullName,
-      input.role,
-    );
-
-    // If player, create player profile
-    if (input.role === 'player') {
-      await profilesRepository.createPlayerProfile(data.user.id, input.birthdate);
     }
 
     return {

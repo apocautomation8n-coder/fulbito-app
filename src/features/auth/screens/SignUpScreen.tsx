@@ -3,12 +3,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ArrowLeft, Calendar, User, Mail, Lock, CheckCircle } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
@@ -34,12 +36,13 @@ interface SignUpScreenProps {
 }
 
 export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenProps) {
-  const { signUp, isConfigured, user } = useAuth();
+  const { signUp, isConfigured } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [birthdate, setBirthdate] = useState('');
+  const [birthdate, setBirthdate] = useState<Date | null>(null);
+  const [showBirthdatePicker, setShowBirthdatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showClubRegistration, setShowClubRegistration] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
@@ -60,6 +63,33 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
   }));
+
+  const maxBirthdate = new Date();
+  maxBirthdate.setFullYear(maxBirthdate.getFullYear() - businessRules.minimumAge);
+
+  const formatBirthdateForDisplay = (date: Date) =>
+    date.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+  const formatBirthdateForSubmit = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleBirthdateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowBirthdatePicker(false);
+    }
+
+    if (selectedDate) {
+      setBirthdate(selectedDate);
+    }
+  };
 
   const handleSignUp = async () => {
     if (!fullName.trim()) {
@@ -87,14 +117,20 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
       return;
     }
 
-    if (defaultRole === 'player' && !birthdate.trim()) {
+    if (defaultRole === 'player' && !birthdate) {
       Alert.alert('Fecha de nacimiento requerida', 'Por favor ingresa tu fecha de nacimiento.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await signUp(email, password, fullName, defaultRole, birthdate || undefined);
+      const result = await signUp(
+        email,
+        password,
+        fullName,
+        defaultRole,
+        birthdate ? formatBirthdateForSubmit(birthdate) : undefined,
+      );
       
       if (defaultRole === 'club') {
         setNewUserId(result.userId);
@@ -144,7 +180,7 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
           keyboardShouldPersistTaps="handled"
         >
           <AnimatedView style={animatedStyle}>
-            {/* ── Header ── */}
+            {/* â”€â”€ Header â”€â”€ */}
             <View style={styles.header}>
               <Button
                 icon={<ArrowLeft size={20} color={colors.textPrimary} />}
@@ -157,12 +193,12 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
               <View style={{ width: 40 }} />
             </View>
 
-            {/* ── Role Badge ── */}
+            {/* â”€â”€ Role Badge â”€â”€ */}
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>Registrando como {roleLabel}</Text>
             </View>
 
-            {/* ── Form Card ── */}
+            {/* â”€â”€ Form Card â”€â”€ */}
             <View style={styles.formCard}>
               <View style={styles.inputGroup}>
                 <Input
@@ -216,15 +252,35 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
 
               {defaultRole === 'player' && (
                 <View style={styles.inputGroup}>
-                  <Input
-                    keyboardType="numbers-and-punctuation"
-                    onChangeText={setBirthdate}
-                    placeholder="DD/MM/YYYY"
-                    value={birthdate}
-                    variant="glass"
-                    label="Fecha de nacimiento"
-                    leftIcon={<Calendar size={18} color={colors.textTertiary} />}
-                  />
+                  <Text style={styles.inputLabel}>Fecha de nacimiento</Text>
+                  <Pressable onPress={() => setShowBirthdatePicker(true)} style={styles.dateField}>
+                    <Calendar size={18} color={colors.textTertiary} />
+                    <Text style={[styles.dateFieldText, !birthdate && styles.datePlaceholder]}>
+                      {birthdate ? formatBirthdateForDisplay(birthdate) : 'Seleccionar fecha'}
+                    </Text>
+                  </Pressable>
+                  {showBirthdatePicker && (
+                    <View style={styles.pickerContainer}>
+                      <DateTimePicker
+                        value={birthdate ?? maxBirthdate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        maximumDate={maxBirthdate}
+                        onChange={handleBirthdateChange}
+                        locale="es-AR"
+                        themeVariant="light"
+                      />
+                      {Platform.OS === 'ios' && (
+                        <Button
+                          label="Confirmar fecha"
+                          onPress={() => setShowBirthdatePicker(false)}
+                          variant="primary"
+                          size="sm"
+                          fullWidth
+                        />
+                      )}
+                    </View>
+                  )}
                   <Text style={styles.hint}>
                     Debes ser mayor de {businessRules.minimumAge} años
                   </Text>
@@ -242,7 +298,7 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
               />
             </View>
 
-            {/* ── Terms ── */}
+            {/* â”€â”€ Terms â”€â”€ */}
             <Text style={styles.terms}>
               Al registrarte aceptas los términos y condiciones de {businessRules.appName}.
             </Text>
@@ -267,7 +323,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
-  // ── Header ──
+  // â”€â”€ Header â”€â”€
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -281,7 +337,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 
-  // ── Role Badge ──
+  // â”€â”€ Role Badge â”€â”€
   roleBadge: {
     alignSelf: 'center',
     backgroundColor: colors.primaryLight,
@@ -296,7 +352,7 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
 
-  // ── Form ──
+  // â”€â”€ Form â”€â”€
   formCard: {
     backgroundColor: colors.card,
     borderRadius: 16,
@@ -309,6 +365,35 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 16,
   },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  dateField: {
+    alignItems: 'center',
+    backgroundColor: colors.cardLight,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+  },
+  dateFieldText: {
+    color: colors.textPrimary,
+    flex: 1,
+    fontSize: 15,
+    marginLeft: spacing.sm,
+  },
+  datePlaceholder: {
+    color: colors.textTertiary,
+  },
+  pickerContainer: {
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
   hint: {
     fontSize: 12,
     fontWeight: '400',
@@ -317,7 +402,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
 
-  // ── Footer ──
+  // â”€â”€ Footer â”€â”€
   terms: {
     fontSize: 12,
     fontWeight: '400',
@@ -327,3 +412,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 });
+

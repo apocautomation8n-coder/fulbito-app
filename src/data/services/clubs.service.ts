@@ -1,4 +1,4 @@
-import { clubsRepository } from '../repositories/clubs.repository';
+import { clubsRepository, type UpdateClubInput } from '../repositories/clubs.repository';
 import { profilesRepository } from '../repositories/profiles.repository';
 
 export type CreateClubProfileInput = {
@@ -26,7 +26,7 @@ export class ClubsService {
     return clubsRepository.submitForApproval(clubId);
   }
 
-  async updateClubProfile(clubId: string, updates: any) {
+  async updateClubProfile(clubId: string, updates: UpdateClubInput) {
     return clubsRepository.updateClub(clubId, updates);
   }
 }

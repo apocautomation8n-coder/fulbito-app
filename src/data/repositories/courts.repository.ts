@@ -1,10 +1,11 @@
 import { supabase } from '../../lib/supabase';
-import type { CourtFormat, PaymentCollectionMode } from '../../types/domain';
+import type { CourtFormat, CourtSport, PaymentCollectionMode } from '../../types/domain';
 
 export type Court = {
   id: string;
   club_id: string;
   name: string;
+  sport: CourtSport;
   format: CourtFormat;
   players_per_team: number | null;
   price_per_slot: number;
@@ -20,6 +21,7 @@ export type Court = {
 export type CreateCourtInput = {
   club_id: string;
   name: string;
+  sport?: CourtSport;
   format: CourtFormat;
   players_per_team?: number;
   price_per_slot: number;
@@ -95,8 +97,9 @@ export class CourtsRepository {
       .from('courts')
       .insert({
         ...input,
+        sport: input.sport || 'football',
         duration_minutes: input.duration_minutes || 60,
-        payment_mode: input.payment_mode || 'full',
+        payment_mode: input.payment_mode || 'at_club',
         photos: input.photos || [],
         is_active: true,
       })
