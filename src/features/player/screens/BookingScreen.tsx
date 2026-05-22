@@ -241,7 +241,7 @@ export function BookingScreen({
             <Pressable onPress={onCancel} style={styles.backButton}>
               <ArrowLeft size={22} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.headerTitle}>Reservar Cancha ⚡</Text>
+            <Text style={styles.headerTitle}>Reservar Cancha</Text>
             <View style={{ width: 40 }} />
           </View>
 
@@ -272,15 +272,6 @@ export function BookingScreen({
               <Text style={styles.dateText}>{formatDateDisplay(selectedDate)}</Text>
               <ChevronDown size={16} color={colors.textTertiary} />
             </Pressable>
-
-            {/* Diagnostic/Debug row to inspect timezone matching */}
-            <View style={styles.debugRow}>
-              <View style={styles.debugBadge}>
-                <Text style={styles.debugText}>
-                  🕒 Reloj: {String(getLocalDeviceTime().hour).padStart(2, '0')}:{String(getLocalDeviceTime().minute).padStart(2, '0')} hs | ¿Es Hoy?: {isToday(selectedDate) ? 'Sí' : 'No'} | {selectedDate.getDate()}/{selectedDate.getMonth() + 1} vs {new Date().getDate()}/{new Date().getMonth() + 1}
-                </Text>
-              </View>
-            </View>
 
             {showDatePicker && (
               <View style={styles.pickerContainer}>
