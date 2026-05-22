@@ -59,6 +59,8 @@ export type OpenMatch = {
   spotsNeeded: number;
   pricePerPlayer: number;
   status: MatchStatus;
+  emoji?: string;
+  hostName?: string;
 };
 
 export type AdminClubReview = {
