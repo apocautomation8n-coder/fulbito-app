@@ -36,6 +36,8 @@ export type Court = {
   distanceKm: number;
   rating: number;
   nextSlotLabel: string;
+  emoji?: string;
+  surfaceType?: string;
 };
 
 export type Booking = {

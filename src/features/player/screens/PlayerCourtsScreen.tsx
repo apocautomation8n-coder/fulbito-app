@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
-import { Clock, MapPin, Search, Star, SlidersHorizontal } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, ScrollView, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Clock, MapPin, Search, Star, SlidersHorizontal, Calendar, Info } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -8,12 +9,10 @@ import { Input } from '../../../components/ui/Input';
 import { Chip } from '../../../components/ui/Chip';
 import { Badge } from '../../../components/ui/Badge';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { H3, H4, Body, Caption } from '../../../components/ui/Typography';
 import { BookingScreen } from './BookingScreen';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
 import { featuredCourts } from '../../../data/mock';
-import { colors, spacing } from '../../../theme/designSystem';
-
+import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
 
 export function PlayerCourtsScreen() {
   const [showBooking, setShowBooking] = useState(false);
@@ -28,7 +27,6 @@ export function PlayerCourtsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-
 
   const neighborhoods = ['Nueva Córdoba', 'Güemes', 'Alta Córdoba', 'Centro', 'General Paz'];
 
@@ -66,39 +64,39 @@ export function PlayerCourtsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.header}>
-          <H3>Canchas</H3>
-          <Body style={styles.subtitle}>Turnos disponibles en {businessRules.launchCity}</Body>
+          <Text style={styles.title}>Reservar Canchas</Text>
+          <Text style={styles.subtitle}>Encuentra y reserva los mejores turnos de fútbol en {businessRules.launchCity}</Text>
         </View>
 
-        <View style={styles.stats}>
-          <Badge label="Comisión 5%" variant="glow" />
-          <Badge label="Bloqueo 10 min" variant="default" />
-        </View>
-
-        <View style={styles.searchContainer}>
-          <Input
-            onChangeText={setSearchQuery}
-            placeholder="Buscar cancha, club o barrio"
-            value={searchQuery}
-            variant="glass"
-            leftIcon={<Search size={18} color={colors.textSecondary} />}
-          />
+        {/* Search and Filters Toggle */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchInputContainer}>
+            <Input
+              onChangeText={setSearchQuery}
+              placeholder="Buscar cancha, club o barrio..."
+              value={searchQuery}
+              variant="glass"
+              leftIcon={<Search size={18} color={colors.textSecondary} />}
+            />
+          </View>
           <Button
-            icon={<SlidersHorizontal size={18} />}
-            label="Filtros"
+            icon={<SlidersHorizontal size={18} color={showFilters ? colors.background : colors.textPrimary} />}
+            label=""
             onPress={() => setShowFilters(!showFilters)}
-            style={styles.filterButton}
-            variant="secondary"
+            style={[styles.filterButton, showFilters && styles.filterButtonActive]}
+            variant={showFilters ? 'primary' : 'secondary'}
             size="md"
           />
         </View>
 
+        {/* Dynamic Filters Panel */}
         {showFilters && (
           <Card variant="glass" size="md" style={styles.filtersCard}>
-            <Caption style={styles.filterTitle}>Barrio</Caption>
+            <Text style={styles.filterTitle}>Filtrar por Barrio</Text>
             <View style={styles.neighborhoodsContainer}>
               <Chip
                 label="Todos"
@@ -121,145 +119,281 @@ export function PlayerCourtsScreen() {
           </Card>
         )}
 
+        {/* Courts List */}
         {filteredCourts.length === 0 ? (
           <EmptyState
             icon={<Search size={48} color={colors.textTertiary} />}
             title="No se encontraron canchas"
-            description="Intenta con otros términos de búsqueda o filtros."
+            description="Intenta cambiar los términos de búsqueda o los filtros de barrio."
           />
         ) : (
           <View style={styles.courtsList}>
-            {filteredCourts.map((court, index) => (
+            {filteredCourts.map((court) => (
               <Card key={court.id} variant="elevated" size="lg" style={styles.courtCard}>
+                {/* Visual Header with Emoji and Club Rating */}
                 <View style={styles.cardHeader}>
-                  <View style={styles.titleBlock}>
-                    <H4>{court.clubName}</H4>
-                    <Body style={styles.courtName}>
-                      {court.name} · {court.format}
-                    </Body>
+                  <View style={styles.courtBadge}>
+                    <Text style={styles.courtEmoji}>{court.emoji || '⚽'}</Text>
                   </View>
-                  <Badge label={formatCurrency(court.pricePerSlot)} variant="accent" />
+                  <View style={styles.titleBlock}>
+                    <Text style={styles.clubName}>{court.clubName}</Text>
+                    <Text style={styles.courtName}>
+                      {court.name} · {court.format}
+                    </Text>
+                  </View>
+                  <View style={styles.ratingBadge}>
+                    <Star size={14} color="#F59E0B" fill="#F59E0B" />
+                    <Text style={styles.ratingText}>{court.rating.toFixed(1)}</Text>
+                  </View>
                 </View>
 
+                {/* Tags Row */}
+                <View style={styles.tagsRow}>
+                  {court.surfaceType && (
+                    <Badge label={court.surfaceType} variant="default" size="sm" />
+                  )}
+                  <Badge label={`${court.durationMinutes} min`} variant="default" size="sm" />
+                  <Badge label="Verificado" variant="glow" size="sm" />
+                </View>
+
+                {/* Meta details */}
                 <View style={styles.metaRow}>
                   <View style={styles.metaItem}>
-                    <MapPin size={16} color={colors.textSecondary} />
-                    <Caption>{court.neighborhood} · {court.distanceKm} km</Caption>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Star size={16} color={colors.accent} />
-                    <Caption>{court.rating}</Caption>
+                    <MapPin size={16} color={colors.textTertiary} />
+                    <Text style={styles.metaText}>{court.neighborhood} · {court.distanceKm} km</Text>
                   </View>
                 </View>
 
-                <View style={styles.footer}>
-                  <View style={styles.metaItem}>
-                    <Clock size={16} color={colors.primary} />
-                    <Caption style={styles.nextSlot}>{court.nextSlotLabel}</Caption>
+                <View style={styles.divider} />
+
+                {/* Footer block with Next Slot and Price & Action */}
+                <View style={styles.cardFooter}>
+                  <View style={styles.slotBlock}>
+                    <Text style={styles.nextSlotLabel}>Próximo turno</Text>
+                    <View style={styles.slotDetail}>
+                      <Clock size={14} color={colors.primary} />
+                      <Text style={styles.slotTime}>{court.nextSlotLabel}</Text>
+                    </View>
                   </View>
-                  <Button
-                    label="Reservar"
-                    onPress={() => {
-                      setSelectedCourt({
-                        id: court.id,
-                        name: court.name,
-                        clubName: court.clubName,
-                        format: court.format,
-                        pricePerSlot: court.pricePerSlot,
-                        durationMinutes: court.durationMinutes,
-                      });
-                      setShowBooking(true);
-                    }}
-                    variant="primary"
-                    size="md"
-                  />
+
+                  <View style={styles.actionBlock}>
+                    <Text style={styles.priceText}>{formatCurrency(court.pricePerSlot)}</Text>
+                    <Button
+                      label="Reservar"
+                      onPress={() => {
+                        setSelectedCourt({
+                          id: court.id,
+                          name: court.name,
+                          clubName: court.clubName,
+                          format: court.format,
+                          pricePerSlot: court.pricePerSlot,
+                          durationMinutes: court.durationMinutes,
+                        });
+                        setShowBooking(true);
+                      }}
+                      variant="primary"
+                      size="sm"
+                      style={styles.reserveButton}
+                    />
+                  </View>
                 </View>
               </Card>
             ))}
           </View>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
+    flex: 1,
     backgroundColor: colors.background,
+  },
+  container: {
     flex: 1,
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: spacing['3xl'],
   },
   header: {
-    marginBottom: spacing.lg,
+    marginBottom: 20,
+    marginTop: 8,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
   subtitle: {
+    fontSize: 14,
     color: colors.textSecondary,
-    marginTop: spacing.sm,
+    marginTop: 6,
+    lineHeight: 20,
   },
-  stats: {
+  searchRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
+    gap: 10,
+    marginBottom: 16,
+    alignItems: 'center',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+  searchInputContainer: {
+    flex: 1,
   },
   filterButton: {
-    flexShrink: 0,
+    aspectRatio: 1,
+    paddingHorizontal: 0,
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
   },
   filtersCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    padding: spacing.md,
+    marginBottom: 16,
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   filterTitle: {
-    marginBottom: spacing.md,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   neighborhoodsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 8,
   },
   courtsList: {
-    gap: spacing.lg,
+    gap: 16,
   },
   courtCard: {
-    padding: spacing.lg,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.md,
   },
   cardHeader: {
-    alignItems: 'flex-start',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  courtBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.cardLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  courtEmoji: {
+    fontSize: 22,
   },
   titleBlock: {
     flex: 1,
   },
+  clubName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
   courtName: {
+    fontSize: 13,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+    marginTop: 2,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFDF5',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: spacing.lg,
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   metaItem: {
-    alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  footer: {
     alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 12,
+  },
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  nextSlot: {
-    color: colors.primary,
+  slotBlock: {
+    flex: 1,
+  },
+  nextSlotLabel: {
+    fontSize: 11,
     fontWeight: '600',
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  slotDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  slotTime: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  actionBlock: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  priceText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  reserveButton: {
+    minHeight: 36,
+    paddingHorizontal: 16,
   },
 });
