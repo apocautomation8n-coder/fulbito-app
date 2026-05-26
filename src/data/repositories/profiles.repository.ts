@@ -28,6 +28,7 @@ export type PlayerProfile = {
   football_profile: FootballPlayerProfile;
   padel_profile: PadelPlayerProfile;
   transfer_alias: string | null;
+  phone: string | null;
   avg_rating: number;
   matches_played: number;
   created_at: string;

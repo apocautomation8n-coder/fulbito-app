@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Fulbito",
+    "name": "Fulbito & Padel",
     "slug": "fulbito",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "description": "Fulbito conecta jugadores y clubes de futbol en Cordoba para reservar canchas, dividir pagos y armar partidos.",
+    "description": "Fulbito conecta jugadores y clubes de futbol y padel en Cordoba para reservar canchas, dividir pagos y armar partidos.",
     "userInterfaceStyle": "light",
     "scheme": "fulbito",
     "ios": {

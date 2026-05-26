@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar, CalendarPlus, CheckCircle2, Clock, Plus, RotateCcw, Star, UserCheck, XCircle } from 'lucide-react-native';
@@ -7,7 +7,10 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Screen } from '../../../components/ui/Screen';
 import { StatPill } from '../../../components/ui/StatPill';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
+import { courtsRepository } from '../../../data/repositories/courts.repository';
+import { clubsService } from '../../../data/services/clubs.service';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
 import { colors, spacing, typography } from '../../../theme/theme';
 import type { BookingStatus, PaymentCollectionMode } from '../../../types/domain';
@@ -31,12 +34,6 @@ type MatchReview = {
   attended: boolean;
   organizerRating: number;
 };
-
-const demoCourts = [
-  { id: 'court-1', name: 'Cancha 1' },
-  { id: 'court-2', name: 'Sintetico A' },
-  { id: 'court-3', name: 'Cancha 3' },
-];
 
 const addDays = (days: number) => {
   const date = new Date();
@@ -69,56 +66,14 @@ const formatDateLabel = (date: Date) => {
   });
 };
 
-const initialAgenda: AgendaItem[] = [
-  {
-    id: 'booking-club-1',
-    courtId: 'court-1',
-    courtName: 'Cancha 1',
-    customerName: 'Mateo Gomez',
-    day: formatDateLabel(addDays(0)),
-    dateKey: formatDateKey(addDays(0)),
-    startTime: '19:00',
-    durationMinutes: 60,
-    amount: 28000,
-    paymentMode: 'at_club',
-    status: 'paid',
-    isManual: false,
-  },
-  {
-    id: 'booking-club-2',
-    courtId: 'court-2',
-    courtName: 'Sintetico A',
-    customerName: 'Reserva web',
-    day: formatDateLabel(addDays(0)),
-    dateKey: formatDateKey(addDays(0)),
-    startTime: '20:30',
-    durationMinutes: 60,
-    amount: 22000,
-    paymentMode: 'at_club',
-    status: 'pending_payment',
-    isManual: false,
-  },
-  {
-    id: 'manual-club-1',
-    courtId: 'court-1',
-    courtName: 'Cancha 1',
-    customerName: 'Clase escuela',
-    day: formatDateLabel(addDays(1)),
-    dateKey: formatDateKey(addDays(1)),
-    startTime: '18:00',
-    durationMinutes: 90,
-    amount: 0,
-    paymentMode: 'at_club',
-    status: 'manual_block',
-    isManual: true,
-  },
-];
-
 export function ClubAgendaScreen() {
-  const [bookings, setBookings] = useState<AgendaItem[]>(initialAgenda);
+  const { user, isConfigured } = useAuth();
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [clubCourts, setClubCourts] = useState<Array<{ id: string; name: string }>>([]);
+  const [bookings, setBookings] = useState<AgendaItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [manualCourtId, setManualCourtId] = useState(demoCourts[0].id);
+  const [manualCourtId, setManualCourtId] = useState('');
   const [manualDate, setManualDate] = useState(new Date());
   const [showManualDatePicker, setShowManualDatePicker] = useState(false);
   const [manualStartTime, setManualStartTime] = useState('');
@@ -141,22 +96,37 @@ export function ClubAgendaScreen() {
   const pendingCount = bookings.filter((booking) => booking.status === 'pending_payment').length;
   const blockedCount = bookings.filter((booking) => booking.status === 'manual_block').length;
 
+  useEffect(() => {
+    if (!user?.id || !isConfigured) return;
+
+    clubsService.getClubByOwner(user.id).then(async (club) => {
+      if (!club) return;
+      setClubId(club.id);
+      const courts = await courtsRepository.getClubCourts(club.id);
+      const mappedCourts = courts.map((court) => ({ id: court.id, name: court.name }));
+      setClubCourts(mappedCourts);
+      if (mappedCourts[0]) {
+        setManualCourtId(mappedCourts[0].id);
+      }
+    });
+  }, [isConfigured, user?.id]);
+
   const loadBookings = async () => {
+    if (!clubId) {
+      setBookings([]);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const clubBookings = await bookingsRepository.getClubBookings('demo-club');
-      if (clubBookings.length === 0) {
-        setBookings(initialAgenda);
-        return;
-      }
-
+      const clubBookings = await bookingsRepository.getClubBookings(clubId);
       setBookings(
         clubBookings.map((booking) => ({
           id: booking.id,
           courtId: booking.court_id,
-          courtName: booking.courtName ?? `Cancha ${booking.court_id.slice(0, 4)}`,
+          courtName: booking.courtName ?? 'Cancha',
           customerName: booking.is_manual ? 'Bloqueo manual' : 'Reserva online',
-          day: formatDateLabel(new Date()),
+          day: booking.startsAtLabel ?? formatDateLabel(new Date()),
           dateKey: formatDateKey(new Date()),
           startTime: '20:00',
           durationMinutes: businessRules.defaultTurnDurationMinutes,
@@ -166,9 +136,9 @@ export function ClubAgendaScreen() {
           isManual: booking.is_manual,
         })),
       );
-    } catch (error) {
-      setBookings(initialAgenda);
-      Alert.alert('Agenda demo cargada', 'No pudimos conectar Supabase, cargamos datos de ejemplo.');
+    } catch {
+      setBookings([]);
+      Alert.alert('Error', 'No pudimos cargar la agenda del club.');
     } finally {
       setIsLoading(false);
     }
@@ -269,7 +239,11 @@ export function ClubAgendaScreen() {
       return;
     }
 
-    const court = demoCourts.find((item) => item.id === manualCourtId) ?? demoCourts[0];
+    const court = clubCourts.find((item) => item.id === manualCourtId) ?? clubCourts[0];
+    if (!court || !clubId || !user?.id) {
+      Alert.alert('Sin canchas', 'Carga al menos una cancha antes de bloquear horarios.');
+      return;
+    }
     setBookings((current) => [
       {
         id: `manual-${Date.now()}`,
@@ -326,7 +300,7 @@ export function ClubAgendaScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Cancha</Text>
             <View style={styles.courtRow}>
-              {demoCourts.map((court) => {
+              {clubCourts.map((court) => {
                 const selected = manualCourtId === court.id;
                 return (
                   <Pressable

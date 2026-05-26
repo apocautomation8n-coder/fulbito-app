@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { H3, Body, Caption } from '../../../components/ui/Typography';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { ratingsRepository } from '../../../data/repositories/ratings.repository';
 import { colors, spacing, borderRadius } from '../../../theme/designSystem';
 
@@ -16,6 +17,7 @@ export function RatePlayerScreen({ playerId, playerName, matchId, onComplete, on
   onComplete: () => void;
   onCancel: () => void;
 }) {
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,7 +31,7 @@ export function RatePlayerScreen({ playerId, playerName, matchId, onComplete, on
     setIsSubmitting(true);
     try {
       await ratingsRepository.submitRating({
-        rater_id: 'demo-player',
+        rater_id: user?.id ?? '',
         rated_id: playerId,
         match_id: matchId,
         rating,

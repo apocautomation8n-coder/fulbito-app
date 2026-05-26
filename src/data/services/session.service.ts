@@ -43,11 +43,18 @@ export async function hydrateAppUser(
       clubVerificationStatus = club?.verification_status ?? 'draft';
     }
 
+    let phone: string | undefined;
+    if (profile.role === 'player') {
+      const playerProfile = await profilesRepository.getPlayerProfile(profile.id);
+      phone = playerProfile?.phone?.trim() || undefined;
+    }
+
     return {
       id: profile.id,
       email: profile.email,
       fullName: profile.full_name,
       role: profile.role,
+      phone,
       clubVerificationStatus,
     };
   } catch {

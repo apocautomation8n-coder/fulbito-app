@@ -6,7 +6,8 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { clubsService } from '../../../data/services/clubs.service';
 import { businessRules } from '../../../config/businessRules';
-import { colors, spacing, typography } from '../../../theme/theme';
+import { Input } from '../../../components/ui/Input';
+import { colors, spacing, typography, shadows } from '../../../theme/designSystem';
 
 interface ClubRegistrationScreenProps {
   ownerId: string;
@@ -68,56 +69,50 @@ export function ClubRegistrationScreen({ ownerId, onComplete, onCancel }: ClubRe
 
         <Card style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nombre del club</Text>
-            <View style={styles.inputWrapper}>
-              <Building2 color={colors.muted} size={20} style={styles.inputIcon} />
-              <TextInput
-                autoCapitalize="words"
-                onChangeText={setName}
-                placeholder="Ej: La Docta Futbol"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={name}
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Dirección (opcional)</Text>
-            <TextInput
+            <Input
               autoCapitalize="words"
-              onChangeText={setAddress}
-              placeholder="Calle y numero"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
-              value={address}
+              onChangeText={setName}
+              placeholder="Ej: La Docta Futbol"
+              value={name}
+              variant="glass"
+              label="Nombre del club"
+              leftIcon={<Building2 color={colors.textTertiary} size={18} />}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Barrio</Text>
-            <View style={styles.inputWrapper}>
-              <MapPin color={colors.muted} size={20} style={styles.inputIcon} />
-              <TextInput
-                autoCapitalize="words"
-                onChangeText={setNeighborhood}
-                placeholder="Ej: Nueva Córdoba"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={neighborhood}
-              />
-            </View>
+            <Input
+              autoCapitalize="words"
+              onChangeText={setAddress}
+              placeholder="Calle y numero"
+              value={address}
+              variant="glass"
+              label="Direccion (opcional)"
+              leftIcon={<MapPin color={colors.textTertiary} size={18} />}
+            />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Ciudad</Text>
-            <TextInput
+            <Input
+              autoCapitalize="words"
+              onChangeText={setNeighborhood}
+              placeholder="Ej: Nueva Cordoba"
+              value={neighborhood}
+              variant="glass"
+              label="Barrio"
+              leftIcon={<MapPin color={colors.textTertiary} size={18} />}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Input
               autoCapitalize="words"
               onChangeText={setCity}
               placeholder="Ciudad"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
               value={city}
+              variant="glass"
+              label="Ciudad"
+              leftIcon={<MapPin color={colors.textTertiary} size={18} />}
             />
           </View>
 
@@ -152,46 +147,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
-    color: colors.ink,
-    fontSize: typography.h2,
+    color: colors.textPrimary,
+    fontSize: 24,
     fontWeight: '800',
   },
   form: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.md,
     gap: spacing.lg,
   },
   inputGroup: {
-    gap: spacing.sm,
-  },
-  label: {
-    color: colors.ink,
-    fontSize: typography.small,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: spacing.md,
-    zIndex: 1,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: typography.body,
-    minHeight: 48,
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.md,
-    width: '100%',
+    marginBottom: 0,
   },
   info: {
-    color: colors.muted,
-    fontSize: typography.small,
+    color: colors.textTertiary,
+    fontSize: 13,
     lineHeight: 20,
     textAlign: 'center',
+    marginTop: 8,
   },
 });

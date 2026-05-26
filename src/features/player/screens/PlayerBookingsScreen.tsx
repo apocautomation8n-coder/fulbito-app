@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Alert, StyleSheet, FlatList, View, RefreshControl, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CreditCard, Calendar as CalendarIcon, Clock, DollarSign, Activity, FileText } from 'lucide-react-native';
@@ -7,30 +8,40 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { formatCurrency } from '../../../config/businessRules';
 import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
 import type { Booking } from '../../../data/repositories/bookings.repository';
 
 export function PlayerBookingsScreen() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+  const loadBookings = useCallback(async () => {
+    if (!user?.id) {
+      setBookings([]);
+      return;
+    }
 
-  const loadBookings = async () => {
     setIsLoading(true);
     try {
-      const playerBookings = await bookingsRepository.getPlayerBookings('demo-player');
+      const playerBookings = await bookingsRepository.getPlayerBookings(user.id);
       setBookings(playerBookings);
     } catch (error) {
-      Alert.alert('Error', 'No pudimos cargar tus reservas.');
+      const message = error instanceof Error ? error.message : 'No pudimos cargar tus reservas.';
+      Alert.alert('Error', message);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadBookings();
+    }, [loadBookings]),
+  );
 
   const handlePay = (booking: Booking) => {
     Alert.alert(
@@ -52,7 +63,7 @@ export function PlayerBookingsScreen() {
   const handleViewDetail = (booking: Booking) => {
     Alert.alert(
       'Detalle del Turno',
-      `📍 Complejo: ${booking.clubName || 'Demo Club'}\n⚽ Cancha: ${booking.courtName || 'Cancha general'}\n⏰ Horario: ${booking.startsAtLabel || 'Hoy'}\n💳 ID Transacción: ${booking.mp_payment_id || 'Bloqueo Manual'}`,
+      `Complejo: ${booking.clubName || 'Sin nombre'}\nCancha: ${booking.courtName || 'Sin nombre'}\nHorario: ${booking.startsAtLabel || 'Sin horario'}\nPago: ${booking.mp_payment_id || 'Pendiente o bloqueo manual'}`,
     );
   };
 
@@ -102,7 +113,7 @@ export function PlayerBookingsScreen() {
 
         {/* Footer actions */}
         <View style={styles.cardFooter}>
-          <Text style={styles.bookingIdText}>ID: #{booking.id.toUpperCase()}</Text>
+          <Text style={styles.bookingIdText}>ID: #{booking.id.slice(0, 8).toUpperCase()}</Text>
           <Button
             icon={isPending ? <CreditCard size={16} color="#FFFFFF" /> : <FileText size={16} color={colors.textPrimary} />}
             label={isPending ? 'Pagar Ahora' : 'Ver Comprobante'}

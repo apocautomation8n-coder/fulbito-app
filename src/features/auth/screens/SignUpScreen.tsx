@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { ArrowLeft, Calendar, User, Mail, Lock, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Calendar, User, Mail, Lock, CheckCircle, Phone } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -41,6 +41,7 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [birthdate, setBirthdate] = useState<Date | null>(null);
   const [showBirthdatePicker, setShowBirthdatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,6 +123,12 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
       return;
     }
 
+    const normalizedPhone = phone.replace(/\s+/g, '');
+    if (defaultRole === 'player' && normalizedPhone.length < 8) {
+      Alert.alert('Celular requerido', 'Ingresa tu numero de celular con codigo de area.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const result = await signUp(
@@ -130,20 +137,31 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
         fullName,
         defaultRole,
         birthdate ? formatBirthdateForSubmit(birthdate) : undefined,
+        defaultRole === 'player' ? normalizedPhone : undefined,
       );
       
       if (defaultRole === 'club') {
+        if (!result.userId || result.needsEmailConfirmation) {
+          Alert.alert(
+            'Confirma tu email',
+            'Te enviamos un correo de confirmacion. Abri el link y despues inicia sesion para completar el registro del club.',
+          );
+          onBack();
+          return;
+        }
+
         setNewUserId(result.userId);
         setShowClubRegistration(true);
-      } else {
-        Alert.alert(
-          'Registro exitoso',
-          isConfigured
-            ? 'Tu cuenta ha sido creada. Por favor verifica tu email.'
-            : 'Modo demo: Cuenta creada exitosamente.',
-        );
-        onBack();
+        return;
       }
+
+      Alert.alert(
+        'Registro exitoso',
+        result.needsEmailConfirmation
+          ? 'Te enviamos un correo de confirmacion. Abri el link y despues inicia sesion.'
+          : 'Tu cuenta ya esta lista. Ya podes iniciar sesion.',
+      );
+      onBack();
     } catch (error) {
       Alert.alert('Error en el registro', error instanceof Error ? error.message : 'Inténtalo nuevamente.');
     } finally {
@@ -202,6 +220,7 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
             <View style={styles.formCard}>
               <View style={styles.inputGroup}>
                 <Input
+                  autofillMode="name"
                   autoCapitalize="words"
                   onChangeText={setFullName}
                   placeholder="Nombre completo"
@@ -214,6 +233,7 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
 
               <View style={styles.inputGroup}>
                 <Input
+                  autofillMode="email"
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
@@ -226,26 +246,47 @@ export function SignUpScreen({ onBack, defaultRole = 'player' }: SignUpScreenPro
                 />
               </View>
 
+              {defaultRole === 'player' && (
+                <View style={styles.inputGroup}>
+                  <Input
+                    autofillMode="tel"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="phone-pad"
+                    onChangeText={setPhone}
+                    placeholder="Ej: 3516889921"
+                    value={phone}
+                    variant="glass"
+                    label="Numero de celular"
+                    leftIcon={<Phone size={18} color={colors.textTertiary} />}
+                  />
+                </View>
+              )}
+
               <View style={styles.inputGroup}>
                 <Input
+                  autofillMode="newPassword"
                   onChangeText={setPassword}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Minimo 6 caracteres"
                   secureTextEntry
+                  showPasswordToggle
                   value={password}
                   variant="glass"
-                  label="Contraseña"
+                  label="Contrasena"
                   leftIcon={<Lock size={18} color={colors.textTertiary} />}
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Input
+                  autofillMode="newPassword"
                   onChangeText={setConfirmPassword}
-                  placeholder="Repetir contraseña"
+                  placeholder="Repetir contrasena"
                   secureTextEntry
+                  showPasswordToggle
                   value={confirmPassword}
                   variant="glass"
-                  label="Confirmar contraseña"
+                  label="Confirmar contrasena"
                   leftIcon={<CheckCircle size={18} color={colors.textTertiary} />}
                 />
               </View>

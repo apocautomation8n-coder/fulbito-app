@@ -7,11 +7,18 @@ export type SignUpInput = {
   fullName: string;
   role: UserRole;
   birthdate?: string;
+  phone?: string;
 };
 
 export type AuthError = {
   message: string;
   code?: string;
+};
+
+export type SignUpResult = {
+  email: string;
+  userId?: string;
+  needsEmailConfirmation: boolean;
 };
 
 const normalizeBirthdate = (birthdate?: string) => {
@@ -28,7 +35,7 @@ const normalizeBirthdate = (birthdate?: string) => {
 };
 
 export class AuthService {
-  async signUp(input: SignUpInput): Promise<{ userId: string; email: string }> {
+  async signUp(input: SignUpInput): Promise<SignUpResult> {
     if (!supabase) {
       throw new Error('Supabase not configured');
     }
@@ -41,6 +48,7 @@ export class AuthService {
           full_name: input.fullName,
           role: input.role,
           birthdate: normalizeBirthdate(input.birthdate),
+          phone: input.phone?.trim() || null,
         },
       },
     });
@@ -49,13 +57,18 @@ export class AuthService {
       throw error;
     }
 
-    if (!data.user) {
-      throw new Error('No user returned from signup');
+    const user = data.user ?? data.session?.user;
+    if (user) {
+      return {
+        userId: user.id,
+        email: user.email || input.email,
+        needsEmailConfirmation: !data.session,
+      };
     }
 
     return {
-      userId: data.user.id,
-      email: data.user.email || input.email,
+      email: input.email,
+      needsEmailConfirmation: true,
     };
   }
 

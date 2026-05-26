@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Calendar, Clock, CreditCard, Edit3, ImagePlus, MapPin, Plus, X } from 'lucide-react-native';
@@ -10,7 +10,9 @@ import { SegmentedControl } from '../../../components/ui/SegmentedControl';
 import { AddCourtScreen, type CreatedCourt } from './AddCourtScreen';
 import { CourtAvailabilityScreen } from './CourtAvailabilityScreen';
 import { formatCurrency } from '../../../config/businessRules';
-import { featuredCourts } from '../../../data/mock';
+import { useAuth } from '../../../core/providers/AuthProvider';
+import { courtsRepository } from '../../../data/repositories/courts.repository';
+import { clubsService } from '../../../data/services/clubs.service';
 import { colors, spacing, typography } from '../../../theme/theme';
 import type { CourtFormat, CourtSport, PaymentCollectionMode } from '../../../types/domain';
 
@@ -54,27 +56,37 @@ const padelFormatOptions: Array<{ label: string; value: CourtFormat }> = [
 const getSportLabel = (sport: CourtSport) => (sport === 'padel' ? 'Padel' : 'Futbol');
 const getFormatLabel = (sport: CourtSport, format: CourtFormat) => (sport === 'padel' && format === 'other' ? '2v2' : format);
 
-const initialCourts: ClubCourt[] = featuredCourts
-  .filter((court) => ['court-1', 'court-2', 'court-5'].includes(court.id))
-  .map((court) => ({
-    id: court.id,
-    name: court.name,
-    sport: court.sport,
-    format: court.format,
-    neighborhood: court.neighborhood,
-    pricePerSlot: court.pricePerSlot,
-    durationMinutes: court.durationMinutes,
-    paymentMode: 'at_club',
-    depositAmount: Math.round(court.pricePerSlot * 0.5),
-    photos: court.photos ?? [],
-  }));
+const mapRepoCourt = (court: Awaited<ReturnType<typeof courtsRepository.getClubCourts>>[number]): ClubCourt => ({
+  id: court.id,
+  name: court.name,
+  sport: court.sport,
+  format: court.format,
+  neighborhood: 'Club',
+  pricePerSlot: Number(court.price_per_slot),
+  durationMinutes: court.duration_minutes,
+  paymentMode: court.payment_mode,
+  depositAmount: court.deposit_amount ? Number(court.deposit_amount) : 0,
+  photos: court.photos ?? [],
+});
 
 export function ClubCourtsScreen() {
+  const { user, isConfigured } = useAuth();
   const [showAddCourt, setShowAddCourt] = useState(false);
   const [showAvailability, setShowAvailability] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState<{ id: string; name: string } | null>(null);
-  const [clubId] = useState('demo-club'); // TODO: Get from auth context
-  const [courts, setCourts] = useState<ClubCourt[]>(initialCourts);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [courts, setCourts] = useState<ClubCourt[]>([]);
+
+  useEffect(() => {
+    if (!user?.id || !isConfigured) return;
+
+    clubsService.getClubByOwner(user.id).then(async (club) => {
+      if (!club) return;
+      setClubId(club.id);
+      const rows = await courtsRepository.getClubCourts(club.id);
+      setCourts(rows.map(mapRepoCourt));
+    });
+  }, [isConfigured, user?.id]);
   const [editingCourtId, setEditingCourtId] = useState<string | null>(null);
   const [editSport, setEditSport] = useState<CourtSport>('football');
   const [editFormat, setEditFormat] = useState<CourtFormat>('7v7');
@@ -193,13 +205,13 @@ export function ClubCourtsScreen() {
       ),
     );
     cancelEditCourt();
-    Alert.alert('Cancha actualizada', 'Los cambios ya quedan reflejados en la demo.');
+    Alert.alert('Cancha actualizada', 'Los cambios quedaron guardados.');
   };
 
   if (showAddCourt) {
     return (
       <AddCourtScreen
-        clubId={clubId}
+        clubId={clubId ?? ''}
         onComplete={handleCourtCreated}
         onCancel={() => setShowAddCourt(false)}
       />
@@ -228,7 +240,16 @@ export function ClubCourtsScreen() {
       <Button
         icon={<Plus color={colors.surface} size={18} />}
         label="Agregar cancha"
-        onPress={() => setShowAddCourt(true)}
+        onPress={() => {
+          if (!clubId) {
+            Alert.alert(
+              'Registra tu club',
+              'Completa el perfil y registro del club antes de agregar canchas.',
+            );
+            return;
+          }
+          setShowAddCourt(true);
+        }}
       />
 
       {courts.map((court) => {

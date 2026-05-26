@@ -8,6 +8,7 @@ import { Input } from '../../../components/ui/Input';
 import { Toggle } from '../../../components/ui/Toggle';
 import { Badge } from '../../../components/ui/Badge';
 import { H2, H3, H4, Body, Caption } from '../../../components/ui/Typography';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { matchesRepository } from '../../../data/repositories/matches.repository';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
@@ -23,6 +24,7 @@ interface CreateMatchScreenProps {
 }
 
 export function CreateMatchScreen({ bookingId, courtName, totalAmount, onComplete, onCancel }: CreateMatchScreenProps) {
+  const { user } = useAuth();
   const [spotsTotal, setSpotsTotal] = useState('10');
   const [pricePerPlayer, setPricePerPlayer] = useState('');
   const [description, setDescription] = useState('');
@@ -66,7 +68,7 @@ export function CreateMatchScreen({ bookingId, courtName, totalAmount, onComplet
 
       await matchesRepository.createMatch({
         booking_id: bookingId,
-        organizer_id: 'demo-player',
+        organizer_id: user?.id ?? booking.player_id ?? '',
         spots_total: spots,
         is_split_payment: isSplitPayment,
         price_per_player: price,

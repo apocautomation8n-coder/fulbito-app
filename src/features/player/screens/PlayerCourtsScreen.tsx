@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Clock, MapPin, Search, Star, SlidersHorizontal, Calendar, Info } from 'lucide-react-native';
@@ -11,9 +11,11 @@ import { Badge } from '../../../components/ui/Badge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { BookingScreen } from './BookingScreen';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
-import { featuredCourts } from '../../../data/mock';
+import { useAuth } from '../../../core/providers/AuthProvider';
+import { courtsRepository } from '../../../data/repositories/courts.repository';
+import { mapDbCourtToDisplay } from '../../../data/services/courts-display.service';
 import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
-import type { CourtSport } from '../../../types/domain';
+import type { Court, CourtSport } from '../../../types/domain';
 
 type SportFilter = 'all' | CourtSport;
 
@@ -27,9 +29,13 @@ const getSportLabel = (sport: CourtSport) => (sport === 'padel' ? 'Padel' : 'Fut
 const getCourtFormatLabel = (sport: CourtSport, format: string) => (sport === 'padel' && format === 'other' ? '2v2' : format);
 
 export function PlayerCourtsScreen() {
+  const { isConfigured } = useAuth();
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [isLoadingCourts, setIsLoadingCourts] = useState(isConfigured);
   const [showBooking, setShowBooking] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState<{
     id: string;
+    clubId: string;
     name: string;
     clubName: string;
     format: string;
@@ -43,7 +49,35 @@ export function PlayerCourtsScreen() {
 
   const neighborhoods = ['Nueva Cordoba', 'Guemes', 'Alta Cordoba', 'Centro', 'General Paz'];
 
-  const filteredCourts = featuredCourts.filter((court) => {
+  useEffect(() => {
+    if (!isConfigured) {
+      setCourts([]);
+      setIsLoadingCourts(false);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingCourts(true);
+
+    courtsRepository
+      .getActiveCourts(businessRules.launchCity)
+      .then((rows) => {
+        if (!active) return;
+        setCourts(rows.map((row) => mapDbCourtToDisplay(row)));
+      })
+      .catch(() => {
+        if (active) setCourts([]);
+      })
+      .finally(() => {
+        if (active) setIsLoadingCourts(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isConfigured]);
+
+  const filteredCourts = courts.filter((court) => {
     const matchesSearch = searchQuery === '' || 
       court.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       court.clubName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -60,6 +94,7 @@ export function PlayerCourtsScreen() {
     return (
       <BookingScreen
         courtId={selectedCourt.id}
+        clubId={selectedCourt.clubId}
         courtName={selectedCourt.name}
         clubName={selectedCourt.clubName}
         format={selectedCourt.format}
@@ -225,6 +260,7 @@ export function PlayerCourtsScreen() {
                       onPress={() => {
                         setSelectedCourt({
                           id: court.id,
+                          clubId: court.clubId ?? '',
                           name: court.name,
                           clubName: court.clubName,
                           format: getCourtFormatLabel(court.sport, court.format),

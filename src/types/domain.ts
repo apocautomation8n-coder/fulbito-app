@@ -38,11 +38,13 @@ export type AppUser = {
   email: string;
   fullName: string;
   role: UserRole;
+  phone?: string;
   clubVerificationStatus?: ClubVerificationStatus;
 };
 
 export type Court = {
   id: string;
+  clubId?: string;
   clubName: string;
   name: string;
   sport: CourtSport;

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, CheckCircle2, CreditCard, ImagePlus, X } from 'lucide-react-native';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/Input';
 import { courtsRepository } from '../../../data/repositories/courts.repository';
 import { businessRules } from '../../../config/businessRules';
+import { getErrorMessage } from '../../../lib/errors';
 import { colors, spacing, typography } from '../../../theme/theme';
 import type { CourtFormat, CourtSport, PaymentCollectionMode } from '../../../types/domain';
 
@@ -49,6 +51,17 @@ const padelFormatOptions: Array<{ label: string; value: CourtFormat }> = [
   { label: '2v2', value: '2v2' },
 ];
 
+const suggestedPlayersByFormat: Partial<Record<CourtFormat, string>> = {
+  '5v5': '5',
+  '6v6': '6',
+  '7v7': '7',
+  '8v8': '8',
+  '9v9': '9',
+  '11v11': '11',
+  '1v1': '1',
+  '2v2': '2',
+};
+
 export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenProps) {
   const [name, setName] = useState('');
   const [sport, setSport] = useState<CourtSport>('football');
@@ -63,12 +76,25 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
 
   useEffect(() => {
     if (sport === 'padel') {
-      setFormat('2v2');
-      setPlayersPerTeam('');
-    } else if (format === '1v1' || format === '2v2') {
-      setFormat('7v7');
+      setFormat((current) => (current === '1v1' || current === '2v2' ? current : '2v2'));
+      return;
     }
-  }, [format, sport]);
+
+    setFormat((current) => {
+      if (current === '1v1' || current === '2v2') {
+        return '7v7';
+      }
+      return current;
+    });
+  }, [sport]);
+
+  const selectFormat = (nextFormat: CourtFormat) => {
+    setFormat(nextFormat);
+    const suggested = suggestedPlayersByFormat[nextFormat];
+    if (suggested) {
+      setPlayersPerTeam((current) => (current.trim() ? current : suggested));
+    }
+  };
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -124,52 +150,62 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
       return;
     }
 
+    if (!clubId) {
+      Alert.alert('Club no registrado', 'Completa el registro del club antes de agregar canchas.');
+      return;
+    }
+
+    let playersPerTeamValue: number | undefined;
+    if (playersPerTeam.trim()) {
+      playersPerTeamValue = parseInt(playersPerTeam, 10);
+      if (isNaN(playersPerTeamValue) || playersPerTeamValue < 1) {
+        Alert.alert('Jugadores invalidos', 'Ingresa un numero valido de jugadores por equipo.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      const newCourt: CreatedCourt = {
-        id: `court-${Date.now()}`,
-        name: name.trim(),
-        sport,
-        format,
-        pricePerSlot: price,
-        durationMinutes: duration,
-        paymentMode,
-        depositAmount: Math.round(price * 0.5),
-        photos,
-      };
-
-      await courtsRepository.createCourt({
+      const created = await courtsRepository.createCourt({
         club_id: clubId,
         name: name.trim(),
         sport,
         format,
-        players_per_team: sport === 'football' && playersPerTeam ? parseInt(playersPerTeam, 10) : undefined,
+        players_per_team: playersPerTeamValue,
         price_per_slot: price,
         duration_minutes: duration,
         payment_mode: paymentMode,
         photos,
       });
 
+      const newCourt: CreatedCourt = {
+        id: created.id,
+        name: created.name,
+        sport: created.sport,
+        format: created.format,
+        pricePerSlot: Number(created.price_per_slot),
+        durationMinutes: created.duration_minutes,
+        paymentMode: created.payment_mode,
+        depositAmount: created.deposit_amount ? Number(created.deposit_amount) : Math.round(price * 0.5),
+        photos: created.photos ?? [],
+      };
+
       Alert.alert('Cancha creada', 'La cancha ha sido agregada exitosamente.');
       onComplete(newCourt);
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'No pudimos crear la cancha.');
+      Alert.alert('Error', getErrorMessage(error, 'No pudimos crear la cancha.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
-        style={styles.container}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+  const formBody = (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="always"
+      nestedScrollEnabled
+      showsVerticalScrollIndicator={false}
+    >
           <View style={styles.header}>
             <Pressable onPress={onCancel} style={styles.backButton} accessibilityRole="button">
               <ArrowLeft color={colors.ink} size={20} />
@@ -186,17 +222,15 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
               <Text style={styles.sectionStep}>1 de 3</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nombre de la cancha</Text>
-              <TextInput
-                autoCapitalize="words"
-                onChangeText={setName}
-                placeholder="Ej: Cancha 1, Sintetico A"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={name}
-              />
-            </View>
+            <Input
+              autofillMode="none"
+              autoCapitalize="words"
+              label="Titulo de la cancha"
+              onChangeText={setName}
+              placeholder="Ej: Cancha 1, Sintetico A"
+              returnKeyType="next"
+              value={name}
+            />
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Deporte</Text>
@@ -229,7 +263,7 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
                   return (
                     <Pressable
                       key={option.value}
-                      onPress={() => setFormat(option.value)}
+                      onPress={() => selectFormat(option.value)}
                       style={[styles.formatChip, selected && styles.formatChipSelected]}
                       accessibilityRole="button"
                     >
@@ -242,24 +276,24 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
               </View>
             </View>
 
-            {sport === 'football' && (
-              <View style={styles.inputGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Jugadores por equipo (opcional)</Text>
-                  <Pressable onPress={showPlayersHelp} style={styles.helpButton} accessibilityRole="button">
-                    <Text style={styles.helpButtonText}>?</Text>
-                  </Pressable>
-                </View>
-                <TextInput
-                  keyboardType="number-pad"
-                  onChangeText={setPlayersPerTeam}
-                  placeholder="Ej: 5"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={playersPerTeam}
-                />
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Jugadores por equipo</Text>
+                <Pressable onPress={showPlayersHelp} style={styles.helpButton} accessibilityRole="button">
+                  <Text style={styles.helpButtonText}>?</Text>
+                </Pressable>
               </View>
-            )}
+              <Input
+                autofillMode="none"
+                keyboardType="number-pad"
+                onChangeText={setPlayersPerTeam}
+                placeholder={sport === 'padel' ? 'Ej: 2' : 'Ej: 5 para cancha 5v5'}
+                value={playersPerTeam}
+              />
+              <Text style={styles.helperText}>
+                Cantidad real por lado. Si es 5v5 flexible (5 o 6), pone el maximo permitido.
+              </Text>
+            </View>
           </Card>
 
           <Card style={styles.sectionCard}>
@@ -315,25 +349,23 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
 
             <View style={styles.formRow}>
               <View style={styles.formColumn}>
-                <Text style={styles.label}>Precio por turno</Text>
-                <TextInput
+                <Input
+                  autofillMode="none"
                   keyboardType="decimal-pad"
+                  label="Precio por turno"
                   onChangeText={setPricePerSlot}
-                  placeholder="ARS 25000"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
+                  placeholder="25000"
                   value={pricePerSlot}
                 />
               </View>
 
               <View style={styles.formColumn}>
-                <Text style={styles.label}>Minutos</Text>
-                <TextInput
+                <Input
+                  autofillMode="none"
                   keyboardType="number-pad"
+                  label="Minutos"
                   onChangeText={setDurationMinutes}
                   placeholder="60"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
                   value={durationMinutes}
                 />
               </View>
@@ -359,8 +391,18 @@ export function AddCourtScreen({ clubId, onComplete, onCancel }: AddCourtScreenP
             onPress={handleSubmit}
             fullWidth
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+    </ScrollView>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView behavior="padding" style={styles.container}>
+          {formBody}
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.container}>{formBody}</View>
+      )}
     </SafeAreaView>
   );
 }
@@ -407,6 +449,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     gap: spacing.lg,
+    overflow: 'visible',
   },
   sectionHeader: {
     alignItems: 'center',
@@ -453,16 +496,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 13,
   },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: typography.body,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    width: '100%',
+  helperText: {
+    color: colors.muted,
+    fontSize: typography.tiny,
+    fontWeight: '600',
+    lineHeight: 16,
   },
   formatGrid: {
     flexDirection: 'row',

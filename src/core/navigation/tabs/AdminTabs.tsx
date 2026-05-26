@@ -1,6 +1,7 @@
-import { CreditCard, Shield, Users } from 'lucide-react-native';
+import { CreditCard, LogOut, Shield, Users } from 'lucide-react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
+import { AdminAccountScreen } from '../../../features/admin/screens/AdminAccountScreen';
 import { AdminClubsScreen } from '../../../features/admin/screens/AdminClubsScreen';
 import { AdminPaymentsScreen } from '../../../features/admin/screens/AdminPaymentsScreen';
 import { AdminUsersScreen } from '../../../features/admin/screens/AdminUsersScreen';
@@ -10,6 +11,7 @@ export type AdminTabParamList = {
   Clubs: undefined;
   Users: undefined;
   Payments: undefined;
+  Account: undefined;
 };
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
@@ -49,6 +51,14 @@ export function AdminTabs() {
         options={{
           title: 'Pagos',
           tabBarIcon: ({ color, size }) => <CreditCard color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="Account"
+        component={AdminAccountScreen}
+        options={{
+          title: 'Cuenta',
+          tabBarIcon: ({ color, size }) => <LogOut color={color} size={size} />,
         }}
       />
     </Tab.Navigator>

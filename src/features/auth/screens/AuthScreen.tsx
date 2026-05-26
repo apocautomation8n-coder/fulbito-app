@@ -28,7 +28,7 @@ const roleOptions: Array<{ label: string; value: UserRole; icon: React.ReactNode
 ];
 
 export function AuthScreen() {
-  const { isConfigured, signInDemo, signInWithPassword } = useAuth();
+  const { isConfigured, signInWithPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('player');
@@ -101,6 +101,7 @@ export function AuthScreen() {
             {/* Inputs */}
             <View style={styles.inputGroup}>
               <Input
+                autofillMode="email"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
@@ -114,20 +115,22 @@ export function AuthScreen() {
 
             <View style={styles.inputGroup}>
               <Input
+                autofillMode="password"
                 onChangeText={setPassword}
-                placeholder="Contraseña"
+                placeholder="Contrasena"
                 secureTextEntry
+                showPasswordToggle
                 value={password}
                 variant="glass"
-                label="Contraseña"
+                label="Contrasena"
               />
             </View>
 
             {/* Primary CTA */}
             <Button
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isConfigured}
               icon={<LogIn size={18} color="#FFFFFF" />}
-              label={isConfigured ? 'Iniciar sesión' : 'Entrar demo'}
+              label="Iniciar sesion"
               onPress={handlePasswordSignIn}
               variant="glow"
               size="lg"
@@ -147,14 +150,9 @@ export function AuthScreen() {
             />
 
             {!isConfigured && (
-              <View style={styles.demoSection}>
-                <Text style={styles.demoLabel}>Acceso rápido demo</Text>
-                <View style={styles.demoRow}>
-                  <Button label="Jugador" onPress={() => signInDemo('player')} variant="ghost" size="sm" />
-                  <Button label="Club" onPress={() => signInDemo('club')} variant="ghost" size="sm" />
-                  <Button label="Admin" onPress={() => signInDemo('admin')} variant="ghost" size="sm" />
-                </View>
-              </View>
+              <Text style={styles.configWarning}>
+                Falta configurar Supabase en .env.local para iniciar sesion.
+              </Text>
             )}
           </View>
 
@@ -253,27 +251,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  // â”€â”€ Demo â”€â”€
-  demoSection: {
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  demoLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textTertiary,
-    marginBottom: 8,
-  },
-  demoRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
+  configWarning: {
+    marginTop: 12,
+    fontSize: 13,
+    color: colors.danger,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 
-  // â”€â”€ Footer â”€â”€
+  // Footer
   footer: {
     fontSize: 11,
     fontWeight: '400',

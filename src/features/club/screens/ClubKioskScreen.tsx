@@ -17,14 +17,7 @@ type KioskProduct = {
   stock: number;
 };
 
-const products: KioskProduct[] = [
-  { id: 'water', name: 'Agua 500ml', category: 'Bebidas', price: 1200, stock: 24 },
-  { id: 'soda', name: 'Gaseosa 500ml', category: 'Bebidas', price: 1800, stock: 18 },
-  { id: 'isotonic', name: 'Isotonica', category: 'Bebidas', price: 2200, stock: 12 },
-  { id: 'snack', name: 'Barrita cereal', category: 'Kiosco', price: 900, stock: 20 },
-  { id: 'tape', name: 'Cinta deportiva', category: 'Deporte', price: 2500, stock: 8 },
-  { id: 'vest', name: 'Alquiler pechera', category: 'Alquiler', price: 1500, stock: 30 },
-];
+const products: KioskProduct[] = [];
 
 export function ClubKioskScreen() {
   const [cart, setCart] = useState<Record<string, number>>({});

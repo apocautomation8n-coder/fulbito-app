@@ -1,0 +1,21 @@
+
+> fulbito@1.0.0 web
+> expo start --web --port 8082
+
+env: load .env.local
+env: export EXPO_PUBLIC_APP_ENV EXPO_PUBLIC_COMPANY_LEGAL_NAME EXPO_PUBLIC_SUPPORT_EMAIL EXPO_PUBLIC_COMPANY_WEBSITE
+Starting project at C:\Users\ezeco\Downloads\Apoc empresa\Clientes\Desarrollos Soft\Futbol App
+Starting Metro Bundler
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Web .\index.ts ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.5% ( 69/136)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.5% (312/482)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.5% ( 608/2412)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.5% (1352/2412)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87.2% (2289/2473)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.3% (2666/2706)
+Web Bundled 22057ms index.ts (2830 modules)
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 6757ms index.ts (1 module)
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+ LOG  [web] Logs will appear in the browser console

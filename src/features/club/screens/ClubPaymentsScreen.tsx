@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   CalendarClock,
@@ -14,27 +14,11 @@ import {
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Screen } from '../../../components/ui/Screen';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
+import { clubsService } from '../../../data/services/clubs.service';
 import { businessRules, calculateBookingAmounts, formatCurrency } from '../../../config/businessRules';
 import { colors, spacing, typography } from '../../../theme/theme';
-
-const demoPaidBookings = [28000, 22000, 30000].map((turnPrice, index) => {
-  const amounts = calculateBookingAmounts(turnPrice);
-
-  return {
-    id: `demo-paid-${index}`,
-    total_amount: amounts.totalAmount,
-    amount_due_now: amounts.amountDueNow,
-    app_commission: amounts.appCommission,
-  };
-});
-
-const demoKioskSales = [7200, 5400, 11800, 3600];
-
-const demoExpenses = [
-  { id: 'expense-1', label: 'Reposicion bebidas', amount: 18000 },
-  { id: 'expense-2', label: 'Limpieza vestuarios', amount: 9000 },
-];
 
 const getMonthlyBillingWindow = () => {
   const now = new Date();
@@ -54,15 +38,13 @@ const getMonthlyBillingWindow = () => {
 };
 
 export function ClubPaymentsScreen() {
-  const [generatedTurns, setGeneratedTurns] = useState(demoPaidBookings.length);
-  const [generatedRevenue, setGeneratedRevenue] = useState(
-    demoPaidBookings.reduce((sum, booking) => sum + booking.total_amount, 0),
-  );
-  const [pendingClubCommission, setPendingClubCommission] = useState(
-    demoPaidBookings.reduce((sum, booking) => sum + booking.app_commission - booking.amount_due_now, 0),
-  );
-  const [kioskRevenue, setKioskRevenue] = useState(demoKioskSales.reduce((sum, sale) => sum + sale, 0));
-  const [expenses, setExpenses] = useState(demoExpenses);
+  const { user, isConfigured } = useAuth();
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [generatedTurns, setGeneratedTurns] = useState(0);
+  const [generatedRevenue, setGeneratedRevenue] = useState(0);
+  const [pendingClubCommission, setPendingClubCommission] = useState(0);
+  const [kioskRevenue, setKioskRevenue] = useState(0);
+  const [expenses, setExpenses] = useState<Array<{ id: string; label: string; amount: number }>>([]);
   const [expenseLabel, setExpenseLabel] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -71,26 +53,35 @@ export function ClubPaymentsScreen() {
   const grossIncome = generatedRevenue + kioskRevenue;
   const netIncome = grossIncome - totalExpenses - pendingClubCommission;
 
+  useEffect(() => {
+    if (!user?.id || !isConfigured) return;
+    clubsService.getClubByOwner(user.id).then((club) => {
+      if (club) setClubId(club.id);
+    });
+  }, [isConfigured, user?.id]);
+
   const loadPayments = async () => {
+    if (!clubId) {
+      setGeneratedTurns(0);
+      setGeneratedRevenue(0);
+      setPendingClubCommission(0);
+      setKioskRevenue(0);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // TODO: Get actual club ID from auth context
-      const clubBookings = await bookingsRepository.getClubBookings('demo-club');
+      const clubBookings = await bookingsRepository.getClubBookings(clubId);
       const paidBookings = clubBookings.filter((b) => b.status === 'paid');
-      const sourceBookings = paidBookings.length > 0 ? paidBookings : demoPaidBookings;
-      
-      const generated = sourceBookings
-        .reduce((sum, b) => sum + b.total_amount, 0);
 
-      const pendingCommission = sourceBookings
-        .reduce((sum, b) => sum + Math.max(b.app_commission - b.amount_due_now, 0), 0);
-
-      setGeneratedTurns(sourceBookings.length);
-      setGeneratedRevenue(generated);
-      setPendingClubCommission(pendingCommission);
-      setKioskRevenue(demoKioskSales.reduce((sum, sale) => sum + sale, 0));
-    } catch (error) {
-      Alert.alert('Error', 'No pudimos cargar los pagos.');
+      setGeneratedTurns(paidBookings.length);
+      setGeneratedRevenue(paidBookings.reduce((sum, b) => sum + b.total_amount, 0));
+      setPendingClubCommission(
+        paidBookings.reduce((sum, b) => sum + Math.max(b.app_commission - b.amount_due_now, 0), 0),
+      );
+      setKioskRevenue(0);
+    } catch {
+      Alert.alert('Error', 'No pudimos cargar la caja del club.');
     } finally {
       setIsLoading(false);
     }

@@ -7,14 +7,18 @@ import { ArrowLeft, Calendar, Clock, CreditCard, ChevronDown, Info } from 'lucid
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { bookingsRepository } from '../../../data/repositories/bookings.repository';
 import { CreateMatchScreen } from './CreateMatchScreen';
 import { businessRules, calculateBookingAmounts, formatCurrency } from '../../../config/businessRules';
+import { hasSupabaseConfig } from '../../../lib/supabase';
+import { isValidUuid } from '../../../lib/uuid';
 import { colors, spacing, shadows } from '../../../theme/designSystem';
 import type { PaymentCollectionMode } from '../../../types/domain';
 
 interface BookingScreenProps {
   courtId: string;
+  clubId: string;
   courtName: string;
   clubName: string;
   format: string;
@@ -35,6 +39,7 @@ const AVAILABLE_HOURS = [
 
 export function BookingScreen({
   courtId,
+  clubId,
   courtName,
   clubName,
   format,
@@ -43,6 +48,7 @@ export function BookingScreen({
   onComplete,
   onCancel,
 }: BookingScreenProps) {
+  const { user, isConfigured } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedHour, setSelectedHour] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -153,6 +159,19 @@ export function BookingScreen({
       return;
     }
 
+    if (!user?.id) {
+      Alert.alert('Sesion requerida', 'Inicia sesion para reservar un turno.');
+      return;
+    }
+
+    if (hasSupabaseConfig && (!isValidUuid(courtId) || !isValidUuid(clubId))) {
+      Alert.alert(
+        'Sin canchas disponibles',
+        'No hay canchas activas para reservar. Un club debe cargar y aprobar canchas primero.',
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
@@ -164,34 +183,46 @@ export function BookingScreen({
         courtId,
         bookingStartTime.toISOString(),
         bookingEndTime.toISOString(),
+        user.id,
       );
 
       const holdUntil = new Date(Date.now() + businessRules.paymentHoldMinutes * 60 * 1000);
-      await bookingsRepository.holdSlot(slot.id, 'demo-player', holdUntil.toISOString());
+      await bookingsRepository.holdSlot(slot.id, user.id, holdUntil.toISOString());
 
       const amounts = calculateAmounts();
 
       const booking = await bookingsRepository.createBooking({
         slot_id: slot.id,
-        club_id: 'demo-club',
+        club_id: clubId,
         court_id: courtId,
         total_amount: amounts.totalAmount,
         amount_due_now: amounts.amountDueNow,
         app_commission: amounts.appCommission,
         club_amount: amounts.clubAmount,
         payment_mode: 'at_club',
-        player_id: 'demo-player',
+        player_id: user.id,
       });
 
-      setCreatedBookingId(booking.id);
-      setShowCreateMatch(true);
-    } catch (error) {
-      // In demo mode, simulate a successful booking
+      await bookingsRepository.bookSlot(slot.id);
+      await bookingsRepository.updateBookingPayment(booking.id, `mp-pending-${Date.now()}`);
+
       Alert.alert(
         'Reserva confirmada',
-        `Tu turno en ${courtName} el ${formatDateDisplay(selectedDate)} a las ${selectedHour} hs ha sido reservado exitosamente.\n\nPagas ahora: ${formatCurrency(calculateAmounts().amountDueNow)}\nEn el club: ${formatCurrency(calculateAmounts().amountToPayAtClub)}`,
-        [{ text: 'Genial', onPress: onComplete }],
+        `Tu turno quedo registrado. Lo ves en Mis Reservas.\n\nPagas ahora: ${formatCurrency(amounts.amountDueNow)}\nEn el club: ${formatCurrency(amounts.amountToPayAtClub)}\n\n¿Querés armar un partido para que se sumen otros jugadores?`,
+        [
+          { text: 'No, gracias', style: 'cancel', onPress: onComplete },
+          { 
+            text: 'Sí, armar partido', 
+            onPress: () => {
+              setCreatedBookingId(booking.id);
+              setShowCreateMatch(true);
+            }
+          }
+        ]
       );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No pudimos completar la reserva.';
+      Alert.alert('Error en la reserva', message);
     } finally {
       setIsSubmitting(false);
     }

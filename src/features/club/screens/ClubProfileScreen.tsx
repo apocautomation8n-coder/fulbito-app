@@ -40,8 +40,10 @@ import { useAuth } from '../../../core/providers/AuthProvider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
+import { ClubRegistrationScreen } from './ClubRegistrationScreen';
 import { clubsService } from '../../../data/services/clubs.service';
 import type { Club } from '../../../data/repositories/clubs.repository';
+import { getErrorMessage } from '../../../lib/errors';
 import { businessRules, formatPercent } from '../../../config/businessRules';
 import { company } from '../../../config/company';
 import { colors, spacing, borderRadius } from '../../../theme/designSystem';
@@ -56,12 +58,12 @@ type ClubProfileForm = {
   city: string;
 };
 
-const demoClubProfile: ClubProfileForm = {
-  name: 'Club Demo',
-  address: 'Av. Principal 123',
-  neighborhood: 'Barrio Centro',
+const emptyClubProfile = (): ClubProfileForm => ({
+  name: '',
+  address: '',
+  neighborhood: '',
   city: businessRules.launchCity,
-};
+});
 
 const toForm = (club: Club | null, fallbackName: string): ClubProfileForm => ({
   name: club?.name ?? fallbackName,
@@ -72,12 +74,14 @@ const toForm = (club: Club | null, fallbackName: string): ClubProfileForm => ({
 
 export function ClubProfileScreen() {
   const { isConfigured, signOut, user } = useAuth();
-  const [clubId, setClubId] = useState('demo-club');
-  const [clubProfile, setClubProfile] = useState<ClubProfileForm>(demoClubProfile);
-  const [profileForm, setProfileForm] = useState<ClubProfileForm>(demoClubProfile);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [clubProfile, setClubProfile] = useState<ClubProfileForm>(emptyClubProfile());
+  const [profileForm, setProfileForm] = useState<ClubProfileForm>(emptyClubProfile());
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<ClubVerificationStatus>('draft');
+  const [showClubRegistration, setShowClubRegistration] = useState(false);
+  const [isLoadingClub, setIsLoadingClub] = useState(false);
 
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(16);
@@ -98,15 +102,17 @@ export function ClubProfileScreen() {
     const loadClubProfile = async () => {
       if (!user || !isConfigured) {
         const fallbackProfile = {
-          ...demoClubProfile,
-          name: user?.fullName ?? demoClubProfile.name,
+          ...emptyClubProfile(),
+          name: user?.fullName ?? '',
         };
+        setClubId(null);
         setClubProfile(fallbackProfile);
         setProfileForm(fallbackProfile);
         setVerificationStatus(user?.clubVerificationStatus ?? 'pending');
         return;
       }
 
+      setIsLoadingClub(true);
       try {
         const club = await clubsService.getClubByOwner(user.id);
         if (!active) return;
@@ -118,17 +124,22 @@ export function ClubProfileScreen() {
           setProfileForm(nextProfile);
           setVerificationStatus(club.verification_status);
         } else {
+          setClubId(null);
           const fallbackProfile = {
-            ...demoClubProfile,
+            ...emptyClubProfile(),
             name: user.fullName,
           };
           setClubProfile(fallbackProfile);
           setProfileForm(fallbackProfile);
-          setVerificationStatus(user.clubVerificationStatus ?? 'draft');
+          setVerificationStatus('draft');
         }
       } catch (error) {
         if (!active) return;
-        Alert.alert('Error', 'No pudimos cargar los datos del club.');
+        Alert.alert('Error', getErrorMessage(error, 'No pudimos cargar los datos del club.'));
+      } finally {
+        if (active) {
+          setIsLoadingClub(false);
+        }
       }
     };
 
@@ -171,28 +182,56 @@ export function ClubProfileScreen() {
       return;
     }
 
+    if (!user?.id) {
+      return;
+    }
+
+    const isNewClub = !clubId;
+
     setIsSavingProfile(true);
     try {
       if (isConfigured) {
-        await clubsService.updateClubProfile(clubId, {
-          name: nextProfile.name,
-          address: nextProfile.address || null,
-          neighborhood: nextProfile.neighborhood,
-          city: nextProfile.city,
-        });
+        if (isNewClub) {
+          const created = await clubsService.createClubProfile({
+            owner_id: user.id,
+            name: nextProfile.name,
+            address: nextProfile.address || undefined,
+            neighborhood: nextProfile.neighborhood,
+            city: nextProfile.city,
+          });
+          setClubId(created.clubId);
+          setVerificationStatus('draft');
+        } else {
+          await clubsService.updateClubProfile(clubId, {
+            name: nextProfile.name,
+            address: nextProfile.address || null,
+            neighborhood: nextProfile.neighborhood,
+            city: nextProfile.city,
+          });
+        }
       }
 
       setClubProfile(nextProfile);
       setIsEditOpen(false);
-      Alert.alert('Perfil actualizado', 'Los datos del club fueron guardados.');
+      Alert.alert(
+        isNewClub ? 'Club registrado' : 'Perfil actualizado',
+        isNewClub
+          ? 'Tu club ya esta en el sistema. Ahora podes agregar canchas.'
+          : 'Los datos del club fueron guardados.',
+      );
     } catch (error) {
-      Alert.alert('Error', 'No pudimos guardar los datos del club.');
+      Alert.alert('Error', getErrorMessage(error, 'No pudimos guardar los datos del club.'));
     } finally {
       setIsSavingProfile(false);
     }
   };
 
   const handleSubmitForApproval = async () => {
+    if (!clubId) {
+      Alert.alert('Registra tu club', 'Completa el perfil del club antes de solicitar aprobacion.');
+      return;
+    }
+
     Alert.alert(
       'Solicitar aprobacion',
       'Quieres solicitar la aprobacion de tu club? Una vez aprobado, podras recibir reservas online.',
@@ -208,12 +247,34 @@ export function ClubProfileScreen() {
               setVerificationStatus('pending');
               Alert.alert('Solicitud enviada', 'Tu solicitud de aprobacion ha sido enviada.');
             } catch (error) {
-              Alert.alert('Error', 'No pudimos enviar la solicitud.');
+              Alert.alert('Error', getErrorMessage(error, 'No pudimos enviar la solicitud.'));
             }
           },
         },
       ],
     );
+  };
+
+  const handleClubRegistrationComplete = async (newClubId: string) => {
+    setShowClubRegistration(false);
+    setClubId(newClubId);
+    setVerificationStatus('draft');
+
+    if (user) {
+      try {
+        const club = await clubsService.getClubByOwner(user.id);
+        if (club) {
+          const nextProfile = toForm(club, user.fullName);
+          setClubProfile(nextProfile);
+          setProfileForm(nextProfile);
+          setVerificationStatus(club.verification_status);
+        }
+      } catch {
+        // El club ya fue creado; el perfil se sincroniza en el proximo ingreso.
+      }
+    }
+
+    Alert.alert('Club registrado', 'Ya podes agregar canchas en la pestana Canchas.');
   };
 
   const handleDeleteAccount = () => {
@@ -261,10 +322,35 @@ export function ClubProfileScreen() {
     }
   };
 
+  if (showClubRegistration && user) {
+    return (
+      <ClubRegistrationScreen
+        ownerId={user.id}
+        onComplete={handleClubRegistrationComplete}
+        onCancel={() => setShowClubRegistration(false)}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AnimatedView style={[styles.body, animatedStyle]}>
+        {!clubId && !isLoadingClub ? (
+          <Card variant="elevated" size="lg" style={styles.card}>
+            <Text style={styles.noticeTitle}>Registro pendiente</Text>
+            <Text style={styles.noticeSubtitle}>
+              Tu cuenta es de club, pero aun no cargaste los datos del complejo. Completa el registro para agregar canchas.
+            </Text>
+            <Button
+              label="Registrar mi club"
+              onPress={() => setShowClubRegistration(true)}
+              fullWidth
+              style={styles.registerClubButton}
+            />
+          </Card>
+        ) : null}
+
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Building2 color={colors.background} size={28} />
@@ -449,7 +535,7 @@ export function ClubProfileScreen() {
                 <TextInput
                   autoCapitalize="words"
                   onChangeText={(value) => updateFormField('name', value)}
-                  placeholder="Ej: Club Demo"
+                  placeholder="Ej: Complejo Norte"
                   placeholderTextColor={colors.textTertiary}
                   style={styles.input}
                   value={profileForm.name}
@@ -607,6 +693,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '800',
+  },
+  registerClubButton: {
+    marginTop: spacing.md,
   },
   noticeSubtitle: {
     color: colors.textSecondary,

@@ -1,5 +1,21 @@
+import { format, parseISO } from 'date-fns';
+
 import { supabase } from '../../lib/supabase';
 import type { BookingStatus, PaymentCollectionMode } from '../../types/domain';
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isValidPlayerId = (playerId: string) => UUID_PATTERN.test(playerId);
+
+const formatSlotLabel = (startTime?: string | null) => {
+  if (!startTime) return 'Horario a confirmar';
+  try {
+    return format(parseISO(startTime), 'dd/MM/yyyy HH:mm');
+  } catch {
+    return 'Horario a confirmar';
+  }
+};
 
 export type TimeSlot = {
   id: string;
@@ -45,6 +61,38 @@ export type CreateBookingInput = {
   club_amount: number;
   payment_mode: PaymentCollectionMode;
   is_manual?: boolean;
+};
+
+type BookingRow = Booking & {
+  clubs?: { name: string } | { name: string }[] | null;
+  courts?: { name: string } | { name: string }[] | null;
+  time_slots?: { start_time: string; end_time: string } | { start_time: string; end_time: string }[] | null;
+};
+
+const pickName = (value?: { name: string } | { name: string }[] | null) => {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value[0]?.name;
+  return value.name;
+};
+
+const pickSlot = (
+  value?: { start_time: string; end_time: string } | { start_time: string; end_time: string }[] | null,
+) => {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value[0];
+  return value;
+};
+
+const mapBookingRow = (row: BookingRow): Booking => {
+  const { clubs, courts, time_slots, ...booking } = row;
+  const slot = pickSlot(time_slots);
+
+  return {
+    ...booking,
+    clubName: pickName(clubs),
+    courtName: pickName(courts),
+    startsAtLabel: formatSlotLabel(slot?.start_time),
+  };
 };
 
 export class BookingsRepository {
@@ -206,103 +254,23 @@ export class BookingsRepository {
   }
 
   async getPlayerBookings(playerId: string): Promise<Booking[]> {
-    if (!supabase) {
-      return [
-        {
-          id: 'b-101',
-          player_id: playerId,
-          slot_id: 'slot-1',
-          club_id: 'club-1',
-          court_id: 'court-1',
-          total_amount: 28000,
-          amount_due_now: 700,
-          app_commission: 1400,
-          club_amount: 28000,
-          payment_mode: 'at_club',
-          mp_payment_id: 'mp-99081',
-          status: 'paid',
-          is_manual: false,
-          created_at: new Date().toISOString(),
-          paid_at: new Date().toISOString(),
-          cancelled_at: null,
-          clubName: 'La Docta Futbol',
-          courtName: 'Cancha 1 (Sintetico)',
-          startsAtLabel: 'Hoy 21:00 hs',
-        },
-        {
-          id: 'b-102',
-          player_id: playerId,
-          slot_id: 'slot-2',
-          club_id: 'club-2',
-          court_id: 'court-2',
-          total_amount: 22000,
-          amount_due_now: 550,
-          app_commission: 1100,
-          club_amount: 22000,
-          payment_mode: 'at_club',
-          mp_payment_id: null,
-          status: 'pending_payment',
-          is_manual: false,
-          created_at: new Date().toISOString(),
-          paid_at: null,
-          cancelled_at: null,
-          clubName: 'Barrio Norte Club',
-          courtName: 'Sintetico A',
-          startsAtLabel: 'Dia siguiente 19:00 hs',
-        },
-        {
-          id: 'b-103',
-          player_id: playerId,
-          slot_id: 'slot-3',
-          club_id: 'club-3',
-          court_id: 'court-3',
-          total_amount: 64000,
-          amount_due_now: 1600,
-          app_commission: 3200,
-          club_amount: 64000,
-          payment_mode: 'at_club',
-          mp_payment_id: 'mp-88992',
-          status: 'paid',
-          is_manual: false,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          paid_at: new Date(Date.now() - 86400000).toISOString(),
-          cancelled_at: null,
-          clubName: 'Predio Kempes',
-          courtName: 'Cancha Grande (Cesped)',
-          startsAtLabel: 'Sabado 18:00 hs',
-        },
-        {
-          id: 'b-104',
-          player_id: playerId,
-          slot_id: 'slot-4',
-          club_id: 'club-4',
-          court_id: 'court-4',
-          total_amount: 20000,
-          amount_due_now: 500,
-          app_commission: 1000,
-          club_amount: 20000,
-          payment_mode: 'at_club',
-          mp_payment_id: null,
-          status: 'cancelled',
-          is_manual: false,
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          paid_at: null,
-          cancelled_at: new Date(Date.now() - 172800000).toISOString(),
-          clubName: 'Complejo El Bosque',
-          courtName: 'Cancha 3',
-          startsAtLabel: 'Ayer 20:00 hs',
-        },
-      ];
+    if (!supabase || !isValidPlayerId(playerId)) {
+      return [];
     }
 
     const { data, error } = await supabase
       .from('bookings')
-      .select('*')
+      .select(`
+        *,
+        clubs:club_id (name),
+        courts:court_id (name),
+        time_slots:slot_id (start_time, end_time)
+      `)
       .eq('player_id', playerId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data as BookingRow[] | null)?.map(mapBookingRow) ?? [];
   }
 
   async getClubBookings(clubId: string): Promise<Booking[]> {

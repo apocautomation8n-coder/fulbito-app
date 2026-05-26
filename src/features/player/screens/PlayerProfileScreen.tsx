@@ -30,6 +30,8 @@ const hasSport = (mode: PlayerSportProfileMode, sport: CourtSport) =>
 export function PlayerProfileScreen() {
   const { isConfigured, signOut, user } = useAuth();
   const [transferAlias, setTransferAlias] = useState('');
+  const [phone, setPhone] = useState('');
+  const [birthdateLabel, setBirthdateLabel] = useState('');
   const [isProfileLoading, setIsProfileLoading] = useState(isConfigured);
   const hasHydratedProfile = useRef(false);
   const [sportMode, setSportMode] = useState<PlayerSportProfileMode>('both');
@@ -41,7 +43,7 @@ export function PlayerProfileScreen() {
   const [padelLevel, setPadelLevel] = useState('Intermedio alto');
 
   const persistPlayerProfile = useCallback(async () => {
-    if (!isConfigured || !user?.id || user.id.startsWith('demo-')) {
+    if (!isConfigured || !user?.id) {
       return;
     }
 
@@ -49,6 +51,7 @@ export function PlayerProfileScreen() {
       await profilesRepository.updatePlayerProfile(user.id, {
         sport_profile_mode: sportMode,
         transfer_alias: transferAlias.trim() || null,
+        phone: phone.trim() || null,
         football_profile: {
           position: footballPosition,
           preferredFoot: footballFoot,
@@ -72,6 +75,7 @@ export function PlayerProfileScreen() {
     padelSide,
     padelStyle,
     sportMode,
+    phone,
     transferAlias,
     user?.id,
   ]);
@@ -80,9 +84,11 @@ export function PlayerProfileScreen() {
     let active = true;
 
     const loadProfile = async () => {
-      if (!isConfigured || !user?.id || user.id.startsWith('demo-')) {
+      if (!isConfigured || !user?.id) {
         if (active) {
-          setTransferAlias('jugador.demo');
+          setTransferAlias('');
+          setPhone('');
+          setBirthdateLabel('');
           setIsProfileLoading(false);
         }
         return;
@@ -96,6 +102,13 @@ export function PlayerProfileScreen() {
 
         setSportMode(playerProfile.sport_profile_mode);
         setTransferAlias(playerProfile.transfer_alias ?? '');
+        setPhone(playerProfile.phone ?? '');
+        if (playerProfile.birthdate) {
+          const [year, month, day] = playerProfile.birthdate.split('-');
+          setBirthdateLabel(`${day} / ${month} / ${year}`);
+        } else {
+          setBirthdateLabel('');
+        }
         setFootballPosition(playerProfile.football_profile?.position ?? 'Delantero');
         setFootballFoot(playerProfile.football_profile?.preferredFoot ?? 'Derecho');
         setFootballNumber(playerProfile.football_profile?.jerseyNumber ?? '10');
@@ -141,27 +154,27 @@ export function PlayerProfileScreen() {
     padelSide,
     padelStyle,
     persistPlayerProfile,
+    phone,
     sportMode,
   ]);
 
   const playerStats = {
-    fullName: user?.fullName || 'Ezequiel Cocco',
-    email: user?.email || 'ezequiel@apocautomation.com',
-    phone: '+54 351 688-9921',
+    fullName: user?.fullName || 'Jugador',
+    email: user?.email || '',
     transferAlias,
-    birthdate: '24 / 08 / 1996',
-    level: 12,
-    levelName: 'Oro Pro',
+    birthdate: birthdateLabel,
+    level: 0,
+    levelName: 'Sin nivel',
     position: sportMode === 'both' ? `${footballPosition} / ${padelSide}` : sportMode === 'padel' ? padelSide : footballPosition,
     favFoot: footballFoot,
     jerseyNumber: footballNumber,
-    preferredZone: 'Nueva Cordoba, CBA',
-    rating: 4.9,
-    matchesCount: 38,
-    streak: 8,
-    mvps: 9,
-    xpCurrent: 1420,
-    xpNext: 2000,
+    preferredZone: '',
+    rating: 0,
+    matchesCount: 0,
+    streak: 0,
+    mvps: 0,
+    xpCurrent: 0,
+    xpNext: 100,
   };
 
   const handleDeleteAccount = async () => {
@@ -435,16 +448,25 @@ export function PlayerProfileScreen() {
             </View>
           </View>
 
-          <View style={styles.accountItem}>
+          <View style={styles.accountItemColumn}>
             <View style={styles.itemLeft}>
               <View style={styles.iconBox}>
                 <Phone size={16} color={colors.textSecondary} />
               </View>
-              <View>
-                <Text style={styles.itemLabel}>Numero celular</Text>
-                <Text style={styles.itemValue}>{playerStats.phone}</Text>
-              </View>
+              <Text style={styles.itemLabel}>Numero celular</Text>
             </View>
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isProfileLoading}
+              keyboardType="phone-pad"
+              onBlur={persistPlayerProfile}
+              onChangeText={setPhone}
+              placeholder="Ej: 3516889921"
+              placeholderTextColor={colors.textTertiary}
+              style={styles.profileInput}
+              value={phone}
+            />
           </View>
 
           <View style={styles.accountItem}>
@@ -454,7 +476,9 @@ export function PlayerProfileScreen() {
               </View>
               <View>
                 <Text style={styles.itemLabel}>Fecha de Nacimiento</Text>
-                <Text style={styles.itemValue}>{playerStats.birthdate}</Text>
+                <Text style={styles.itemValue}>
+                  {playerStats.birthdate || 'Sin cargar'}
+                </Text>
               </View>
             </View>
           </View>
@@ -880,6 +904,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  accountItemColumn: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
   },
   aliasItem: {
     flexDirection: 'row',

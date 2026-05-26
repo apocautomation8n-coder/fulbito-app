@@ -12,7 +12,7 @@ export function AdminPaymentsScreen() {
     <Screen title="Pagos" subtitle="Comisiones y conciliacion de reservas online.">
       <View style={styles.stats}>
         <StatPill label="Comision" value={formatPercent(businessRules.platformCommissionRate)} />
-        <StatPill label="Ventas demo" value={formatCurrency(820000)} />
+        <StatPill label="Ventas" value={formatCurrency(0)} />
       </View>
 
       <Card style={styles.card}>

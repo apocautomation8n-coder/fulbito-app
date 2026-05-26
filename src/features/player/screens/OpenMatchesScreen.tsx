@@ -7,12 +7,14 @@ import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { H3, Body, Caption } from '../../../components/ui/Typography';
+import { useAuth } from '../../../core/providers/AuthProvider';
 import { matchesRepository } from '../../../data/repositories/matches.repository';
 import { businessRules, formatCurrency } from '../../../config/businessRules';
 import { colors, spacing, borderRadius } from '../../../theme/designSystem';
 import type { Match } from '../../../data/repositories/matches.repository';
 
 export function OpenMatchesScreen() {
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -44,7 +46,7 @@ export function OpenMatchesScreen() {
             try {
               await matchesRepository.requestToJoin({
                 match_id: match.id,
-                player_id: 'demo-player',
+                player_id: user?.id ?? '',
               });
               Alert.alert('Solicitud enviada', 'Tu solicitud ha sido enviada al organizador.');
               loadMatches();

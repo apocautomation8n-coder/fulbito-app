@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { uploadCourtPhotos } from '../services/court-photos.service';
 import type { CourtFormat, CourtSport, PaymentCollectionMode } from '../../types/domain';
 
 export type Court = {
@@ -93,20 +94,36 @@ export class CourtsRepository {
       throw new Error('Supabase not configured');
     }
 
+    if (!input.club_id) {
+      throw new Error('Registra tu club antes de agregar canchas.');
+    }
+
+    const localPhotos = input.photos ?? [];
+    const photoUrls =
+      localPhotos.length > 0 ? await uploadCourtPhotos(input.club_id, localPhotos) : [];
+
     const { data, error } = await supabase
       .from('courts')
       .insert({
-        ...input,
+        club_id: input.club_id,
+        name: input.name,
         sport: input.sport || 'football',
+        format: input.format,
+        players_per_team: input.players_per_team ?? null,
+        price_per_slot: input.price_per_slot,
         duration_minutes: input.duration_minutes || 60,
         payment_mode: input.payment_mode || 'at_club',
-        photos: input.photos || [],
+        deposit_amount: input.deposit_amount ?? null,
+        photos: photoUrls,
         is_active: true,
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(error.message);
+    }
+
     return data;
   }
 

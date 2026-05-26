@@ -54,7 +54,7 @@ export class ClubsRepository {
       .from('clubs')
       .select('*')
       .eq('owner_id', ownerId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -101,7 +101,7 @@ export class ClubsRepository {
       .insert({
         ...input,
         verification_status: 'draft',
-        city: input.city || 'Córdoba',
+        city: input.city || 'Cordoba',
         photos: input.photos || [],
         split_deadline_hours: 3,
         cancellation_policy: [

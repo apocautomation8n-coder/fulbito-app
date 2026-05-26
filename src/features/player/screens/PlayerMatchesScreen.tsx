@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, FlatList, View, Text, Pressable, Modal, TextInput, Alert, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, Clock, DollarSign, Flag, MapPin, Trophy, Users, User, ArrowLeft, Send, CheckCircle2, Shield } from 'lucide-react-native';
@@ -6,8 +7,10 @@ import { Calendar, Clock, DollarSign, Flag, MapPin, Trophy, Users, User, ArrowLe
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
-import { openMatches } from '../../../data/mock';
+import { EmptyState } from '../../../components/ui/EmptyState';
 import { useAuth } from '../../../core/providers/AuthProvider';
+import { businessRules } from '../../../config/businessRules';
+import { matchesRepository } from '../../../data/repositories/matches.repository';
 import { colors, spacing, borderRadius, shadows } from '../../../theme/designSystem';
 import { formatCurrency } from '../../../config/businessRules';
 import type { CourtSport, OpenMatch } from '../../../types/domain';
@@ -26,42 +29,50 @@ const sportFilters: Array<{ label: string; value: SportFilter }> = [
 const getSportLabel = (sport: CourtSport) => (sport === 'padel' ? 'Padel' : 'Futbol');
 const getFormatLabel = (sport: CourtSport, format: string) => (sport === 'padel' && format === 'other' ? '2v2' : format);
 
-type Winner = 'A' | 'B' | 'draw';
-
-type MatchResultState = {
-  winner: Winner | null;
-  confirmations: number;
-  disputed: boolean;
-  closed: boolean;
-};
-
 export function PlayerMatchesScreen() {
-  const { user } = useAuth();
+  const { user, isConfigured } = useAuth();
+  const [matches, setMatches] = useState<OpenMatch[]>([]);
   const [appliedMatchIds, setAppliedMatchIds] = useState<string[]>([]);
   const [selectedSport, setSelectedSport] = useState<SportFilter>('all');
   const [selectedMatch, setSelectedMatch] = useState<OpenMatch | null>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [resultState, setResultState] = useState<MatchResultState>({
-    winner: null,
-    confirmations: 0,
-    disputed: false,
-    closed: false,
-  });
 
-  // Form states
   const [preferredPosition, setPreferredPosition] = useState('Mediocampista');
   const [contactPhone, setContactPhone] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const filteredMatches = openMatches.filter((match) => selectedSport === 'all' || match.sport === selectedSport);
+
+  const loadMatches = useCallback(async () => {
+    if (!isConfigured) {
+      setMatches([]);
+      return;
+    }
+
+    try {
+      await matchesRepository.getOpenMatches(businessRules.launchCity);
+      setMatches([]);
+    } catch {
+      setMatches([]);
+    }
+  }, [isConfigured]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadMatches();
+    }, [loadMatches]),
+  );
+
+  const filteredMatches = matches.filter(
+    (match) => selectedSport === 'all' || match.sport === selectedSport,
+  );
   const positionOptions = selectedMatch?.sport === 'padel' ? PADEL_POSITIONS : POSITIONS;
 
   const handleOpenApply = (match: OpenMatch) => {
     setSelectedMatch(match);
     setPreferredPosition(match.sport === 'padel' ? 'Indistinto' : 'Mediocampista');
     // Pre-fill phone from player's profile automatically
-    setContactPhone((user as any)?.phone || '+54 351 688-9921');
+    setContactPhone(user?.phone ?? '');
     setShowApplyModal(true);
   };
 
@@ -81,142 +92,6 @@ export function PlayerMatchesScreen() {
       setShowApplyModal(false);
       setShowSuccessModal(true);
     }, 1200);
-  };
-
-  const getWinnerLabel = (winner: Winner | null) => {
-    if (winner === 'A') return 'Gano Equipo A';
-    if (winner === 'B') return 'Gano Equipo B';
-    if (winner === 'draw') return 'Empate';
-    return 'Sin resultado';
-  };
-
-  const declareResult = (winner: Winner) => {
-    setResultState({
-      winner,
-      confirmations: 0,
-      disputed: false,
-      closed: false,
-    });
-  };
-
-  const confirmResult = () => {
-    setResultState((current) => {
-      const confirmations = current.confirmations + 1;
-      return {
-        ...current,
-        confirmations,
-        closed: confirmations >= 2,
-      };
-    });
-  };
-
-  const disputeResult = () => {
-    setResultState((current) => ({
-      ...current,
-      disputed: true,
-      closed: true,
-    }));
-  };
-
-  const resetResultDemo = () => {
-    setResultState({
-      winner: null,
-      confirmations: 0,
-      disputed: false,
-      closed: false,
-    });
-  };
-
-  const renderResultCard = () => {
-    const hasResult = resultState.winner !== null;
-    const verified = resultState.closed && !resultState.disputed && resultState.confirmations >= 2;
-    const disputed = resultState.closed && resultState.disputed;
-
-    return (
-      <Card variant="elevated" size="lg" style={styles.resultCard}>
-        <View style={styles.resultHeader}>
-          <View style={styles.resultIcon}>
-            <Trophy size={20} color={colors.primary} />
-          </View>
-          <View style={styles.titleContainer}>
-            <Text style={styles.resultTitle}>Resultado pendiente</Text>
-            <Text style={styles.resultSubtitle}>Club Centenario - Cancha B</Text>
-          </View>
-          <Badge
-            label={verified ? 'Verificado' : disputed ? 'Disputa' : hasResult ? 'A confirmar' : 'Organizador'}
-            variant={verified ? 'success' : disputed ? 'danger' : 'warning'}
-            size="sm"
-          />
-        </View>
-
-        <View style={styles.teamsBox}>
-          <View style={styles.teamColumn}>
-            <Text style={styles.teamName}>Equipo A</Text>
-            <Text style={styles.teamPlayers}>Ezequiel, Mateo, Julian</Text>
-          </View>
-          <Text style={styles.vsText}>vs</Text>
-          <View style={styles.teamColumn}>
-            <Text style={styles.teamName}>Equipo B</Text>
-            <Text style={styles.teamPlayers}>Santi, Fran, Nacho</Text>
-          </View>
-        </View>
-
-        <Text style={styles.resultRule}>
-          El club valida asistencia. El resultado lo declara el organizador y se confirma entre jugadores.
-          Si hay disputa, el partido cierra sin sumar victoria.
-        </Text>
-
-        {!hasResult && (
-          <View style={styles.resultActions}>
-            <Button label="Gano A" onPress={() => declareResult('A')} size="sm" style={styles.resultButton} />
-            <Button label="Gano B" onPress={() => declareResult('B')} size="sm" style={styles.resultButton} />
-            <Button label="Empate" onPress={() => declareResult('draw')} size="sm" variant="secondary" style={styles.resultButton} />
-          </View>
-        )}
-
-        {hasResult && !resultState.closed && (
-          <View style={styles.resultFlowBox}>
-            <Text style={styles.resultDeclared}>{getWinnerLabel(resultState.winner)}</Text>
-            <Text style={styles.resultMeta}>{resultState.confirmations}/2 confirmaciones para acreditar victoria.</Text>
-            <View style={styles.resultActions}>
-              <Button
-                icon={<CheckCircle2 size={16} color="#FFFFFF" />}
-                label="Confirmar"
-                onPress={confirmResult}
-                size="sm"
-                style={styles.resultButton}
-              />
-              <Button
-                icon={<Flag size={16} color={colors.danger} />}
-                label="Disputar"
-                onPress={disputeResult}
-                size="sm"
-                variant="danger"
-                style={styles.resultButton}
-              />
-            </View>
-          </View>
-        )}
-
-        {verified && (
-          <View style={styles.resultClosedBox}>
-            <Text style={styles.resultClosedTitle}>Victoria acreditada</Text>
-            <Text style={styles.resultClosedText}>Suma partido jugado para asistentes y victoria para el equipo ganador.</Text>
-          </View>
-        )}
-
-        {disputed && (
-          <View style={styles.resultClosedBox}>
-            <Text style={styles.resultClosedTitle}>Cerrado con disputa</Text>
-            <Text style={styles.resultClosedText}>Suma partido jugado para asistentes, pero no suma victoria a ningun equipo.</Text>
-          </View>
-        )}
-
-        {resultState.closed && (
-          <Button label="Reiniciar demo" onPress={resetResultDemo} variant="secondary" size="sm" fullWidth />
-        )}
-      </Card>
-    );
   };
 
   const renderMatchItem = ({ item: match }: { item: OpenMatch }) => {
@@ -330,8 +205,14 @@ export function PlayerMatchesScreen() {
                   </Pressable>
                 ))}
               </View>
-              {renderResultCard()}
             </View>
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon={<Trophy size={48} color={colors.textTertiary} />}
+              title="No hay partidos abiertos"
+              description="Cuando un jugador cree un partido despues de reservar, va a aparecer aca."
+            />
           }
         />
 
